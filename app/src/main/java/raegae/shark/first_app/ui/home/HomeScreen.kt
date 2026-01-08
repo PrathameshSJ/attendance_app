@@ -18,16 +18,22 @@ import raegae.shark.first_app.getApplication
 import raegae.shark.first_app.ui.theme.First_appTheme
 import raegae.shark.first_app.viewmodels.HomeViewModel
 import raegae.shark.first_app.viewmodels.HomeViewModelFactory
-import java.util.*
+import java.util.Calendar
+import java.util.Locale
+
+/* ---------- SINGLE SOURCE OF TRUTH ---------- */
+enum class AttendanceAction {
+    MARK_ABSENT,
+    UNMARK
+}
 
 @Composable
 fun HomeScreen(
-    homeViewModel: HomeViewModel = viewModel(
-        factory = HomeViewModelFactory(getApplication())
-    )
+    homeViewModel: HomeViewModel =
+        viewModel(factory = HomeViewModelFactory(getApplication()))
 ) {
     val students by homeViewModel.students.collectAsState(initial = emptyList())
-    val attendance by homeViewModel.allAttendance.collectAsState(initial = emptyList())
+    val allAttendance by homeViewModel.allAttendance.collectAsState(initial = emptyList())
     val scope = rememberCoroutineScope()
 
     val calendar = Calendar.getInstance()
@@ -41,32 +47,127 @@ fun HomeScreen(
     val today = calendar.getDisplayName(
         Calendar.DAY_OF_WEEK,
         Calendar.SHORT,
-        Locale.ENGLISH
+        Locale.getDefault()
     ) ?: "Mon"
 
-    val attendanceMap = attendance.groupBy { it.studentId }
+    val todaysStudents = students.filter { student ->
+        student.daysOfWeek.any { it.equals(today, ignoreCase = true) }
+    }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        items(students) { student ->
-            val todayAttendance =
-                attendanceMap[student.id]?.find { it.date == todayMillis }
+    val attendanceMap = allAttendance.groupBy { it.studentId }
 
-            StudentCard(
-                student = student,
-                todayAttendance = todayAttendance,
-                today = today,
-                onMarkPresent = {
-                    scope.launch {
-                        homeViewModel.markAttendance(student.id, todayMillis, true)
+    /* ---------- Dialog state ---------- */
+    var showConfirmDialog by remember { mutableStateOf(false) }
+    var selectedStudent by remember { mutableStateOf<Student?>(null) }
+    var pendingAction by remember { mutableStateOf<AttendanceAction?>(null) }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            items(todaysStudents) { student ->
+                val todayAttendance =
+                    attendanceMap[student.id]?.find { it.date == todayMillis }
+
+                StudentCard(
+                    student = student,
+                    todayAttendance = todayAttendance,
+                    today = today,
+                    onMarkPresent = {
+                        scope.launch {
+                            homeViewModel.markAttendance(
+                                student.id,
+                                todayMillis,
+                                true
+                            )
+                        }
+                    },
+                    onRequestAbsent = {
+                        selectedStudent = student
+                        pendingAction = AttendanceAction.MARK_ABSENT
+                        showConfirmDialog = true
+                    },
+                    onRequestUnmark = {
+                        selectedStudent = student
+                        pendingAction = AttendanceAction.UNMARK
+                        showConfirmDialog = true
                     }
-                },
-                onShowAbsentDialog = {},
-                onShowUnmarkDialog = {}
-            )
+                )
+            }
         }
+    }
+
+    /* ---------- Confirmation dialog ---------- */
+    if (showConfirmDialog && selectedStudent != null && pendingAction != null) {
+
+        val studentId = selectedStudent!!.id
+        val studentName = selectedStudent!!.name
+        val action = pendingAction!!
+
+        AlertDialog(
+            onDismissRequest = {
+                showConfirmDialog = false
+                selectedStudent = null
+                pendingAction = null
+            },
+            title = {
+                Text(
+                    when (action) {
+                        AttendanceAction.MARK_ABSENT -> "Mark Absent"
+                        AttendanceAction.UNMARK -> "Unmark Attendance"
+                    }
+                )
+            },
+            text = {
+                Text(
+                    when (action) {
+                        AttendanceAction.MARK_ABSENT ->
+                            "Mark $studentName as absent?"
+                        AttendanceAction.UNMARK ->
+                            "Unmark attendance for $studentName?"
+                    }
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+
+                    showConfirmDialog = false
+                    selectedStudent = null
+                    pendingAction = null
+
+                    scope.launch {
+                        when (action) {
+                            AttendanceAction.MARK_ABSENT ->
+                                homeViewModel.markAttendance(
+                                    studentId,
+                                    todayMillis,
+                                    false
+                                )
+
+                            AttendanceAction.UNMARK ->
+                                homeViewModel.unmarkAttendance(
+                                    studentId,
+                                    todayMillis
+                                )
+                        }
+                    }
+                }) {
+                    Text("Yes")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showConfirmDialog = false
+                    selectedStudent = null
+                    pendingAction = null
+                }) {
+                    Text("No")
+                }
+            }
+        )
     }
 }
 
@@ -76,23 +177,41 @@ fun StudentCard(
     todayAttendance: Attendance?,
     today: String,
     onMarkPresent: () -> Unit,
-    onShowAbsentDialog: () -> Unit,
-    onShowUnmarkDialog: () -> Unit
+    onRequestAbsent: () -> Unit,
+    onRequestUnmark: () -> Unit
 ) {
-    val color = when (todayAttendance?.isPresent) {
-        true -> Color.Green.copy(0.2f)
-        false -> Color.Red.copy(0.2f)
+    val backgroundColor = when (todayAttendance?.isPresent) {
+        true -> Color.Green.copy(alpha = 0.2f)
+        false -> Color.Red.copy(alpha = 0.2f)
         null -> MaterialTheme.colorScheme.surface
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth().clickable { onMarkPresent() },
-        colors = CardDefaults.cardColors(containerColor = color)
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                when {
+                    todayAttendance == null -> onMarkPresent()
+                    todayAttendance.isPresent -> onRequestAbsent()
+                    else -> onRequestUnmark()
+                }
+            },
+        colors = CardDefaults.cardColors(containerColor = backgroundColor)
     ) {
-        Column(Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Text(student.name, style = MaterialTheme.typography.headlineSmall)
             Text(student.subject)
             Text("Time: ${student.batchTimes[today] ?: "N/A"}")
+            Text("Days: ${student.daysOfWeek.joinToString()}")
+            Text(
+                "Status: ${
+                    when (todayAttendance?.isPresent) {
+                        true -> "Present"
+                        false -> "Absent"
+                        null -> "Not Marked"
+                    }
+                }"
+            )
         }
     }
 }
@@ -101,6 +220,21 @@ fun StudentCard(
 @Composable
 fun HomeScreenPreview() {
     First_appTheme {
-        HomeScreen()
+        StudentCard(
+            student = Student(
+                id = 1,
+                name = "John Doe",
+                subject = "Math",
+                subscriptionStartDate = 0,
+                subscriptionEndDate = 0,
+                batchTimes = mapOf("Mon" to "4:00 PM"),
+                daysOfWeek = listOf("Mon")
+            ),
+            todayAttendance = null,
+            today = "Mon",
+            onMarkPresent = {},
+            onRequestAbsent = {},
+            onRequestUnmark = {}
+        )
     }
 }

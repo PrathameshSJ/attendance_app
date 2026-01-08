@@ -1,14 +1,14 @@
 package raegae.shark.first_app.ui.add
 
-import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -17,6 +17,9 @@ import raegae.shark.first_app.getApplication
 import raegae.shark.first_app.viewmodels.AddStudentViewModel
 import raegae.shark.first_app.viewmodels.AddStudentViewModelFactory
 import java.util.Calendar
+import java.util.Locale
+
+fun parseTime(time: String){}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,7 +28,7 @@ fun AddStudentScreen(
     addStudentViewModel: AddStudentViewModel =
         viewModel(factory = AddStudentViewModelFactory(getApplication()))
 ) {
-    val coroutineScope = rememberCoroutineScope()
+    val scope = rememberCoroutineScope()
 
     var name by remember { mutableStateOf("") }
     var subject by remember { mutableStateOf("") }
@@ -35,19 +38,67 @@ fun AddStudentScreen(
     val dayStartTimesStates = remember { weekDays.map { mutableStateOf("9:00 AM") } }
     val dayEndTimesStates = remember { weekDays.map { mutableStateOf("10:00 AM") } }
 
+    /* ---------- Subscription duration ---------- */
+
     var months by remember { mutableStateOf("1") }
     var days by remember { mutableStateOf("0") }
     var expandedMonths by remember { mutableStateOf(false) }
     var expandedDays by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf("") }
 
-    val selectedDays = weekDays.filterIndexed { index, _ ->
-        dayEnabledStates[index].value
-    }
+    /* ---------- Time picker control ---------- */
 
-    val batchTimes = selectedDays.associateWith { day ->
-        val index = weekDays.indexOf(day)
-        "${dayStartTimesStates[index].value} - ${dayEndTimesStates[index].value}"
+    var showTimePicker by remember { mutableStateOf(false) }
+    var activeDayIndex by remember { mutableStateOf(0) }
+    var pickingStart by remember { mutableStateOf(true) }
+
+    var pickerHour by remember { mutableStateOf(9) }
+    var pickerMinute by remember { mutableStateOf(0) }
+
+    val timePickerState = rememberTimePickerState(
+        initialHour = pickerHour,
+        initialMinute = pickerMinute,
+        is24Hour = false
+    )
+
+    if (showTimePicker) {
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    val cal = Calendar.getInstance().apply {
+                        set(Calendar.HOUR_OF_DAY, timePickerState.hour)
+                        set(Calendar.MINUTE, timePickerState.minute)
+                    }
+
+                    val formatted = String.format(
+                        Locale.getDefault(),
+                        "%d:%02d %s",
+                        if (cal.get(Calendar.HOUR) == 0) 12 else cal.get(Calendar.HOUR),
+                        cal.get(Calendar.MINUTE),
+                        if (cal.get(Calendar.AM_PM) == Calendar.AM) "AM" else "PM"
+                    )
+
+                    if (pickingStart) {
+                        dayStartTimesStates[activeDayIndex].value = formatted
+                    } else {
+                        dayEndTimesStates[activeDayIndex].value = formatted
+                    }
+
+                    showTimePicker = false
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) {
+                    Text("Cancel")
+                }
+            },
+            title = { Text("Select Time") },
+            text = {
+                TimePicker(state = timePickerState)
+            }
+        )
     }
 
     Scaffold(
@@ -56,10 +107,7 @@ fun AddStudentScreen(
                 title = { Text("Add Student") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
                     }
                 },
                 actions = {
@@ -67,14 +115,23 @@ fun AddStudentScreen(
                         val monthsInt = months.toIntOrNull() ?: 0
                         val daysInt = days.toIntOrNull() ?: 0
 
-                        val calendar = Calendar.getInstance()
-                        val startDate = calendar.timeInMillis
-                        calendar.add(Calendar.MONTH, monthsInt)
-                        calendar.add(Calendar.DAY_OF_MONTH, daysInt)
-                        val endDate = calendar.timeInMillis
+                        val cal = Calendar.getInstance()
+                        val startDate = cal.timeInMillis
+                        cal.add(Calendar.MONTH, monthsInt)
+                        cal.add(Calendar.DAY_OF_MONTH, daysInt)
+                        val endDate = cal.timeInMillis
 
-                        coroutineScope.launch {
-                            val success = addStudentViewModel.addStudentIfNotExists(
+                        val selectedDays = weekDays.filterIndexed { i, _ ->
+                            dayEnabledStates[i].value
+                        }
+
+                        val batchTimes = selectedDays.associateWith { day ->
+                            val i = weekDays.indexOf(day)
+                            "${dayStartTimesStates[i].value} - ${dayEndTimesStates[i].value}"
+                        }
+
+                        scope.launch {
+                            addStudentViewModel.addStudentIfNotExists(
                                 name = name,
                                 subject = subject,
                                 subscriptionStartDate = startDate,
@@ -82,13 +139,7 @@ fun AddStudentScreen(
                                 batchTimes = batchTimes,
                                 daysOfWeek = selectedDays
                             )
-
-                            if (success) {
-                                navController.popBackStack()
-                            } else {
-                                errorMessage =
-                                    "A student with this name already exists."
-                            }
+                            navController.popBackStack()
                         }
                     }) {
                         Text("Add")
@@ -96,12 +147,11 @@ fun AddStudentScreen(
                 }
             )
         }
-    ) { innerPadding ->
+    ) { padding ->
 
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
+                .padding(padding)
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -121,12 +171,9 @@ fun AddStudentScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Text(
-                "Select Batch Days:",
-                style = MaterialTheme.typography.titleMedium
-            )
+            Text("Select Batch Days", style = MaterialTheme.typography.titleMedium)
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 weekDays.forEachIndexed { index, day ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -134,43 +181,42 @@ fun AddStudentScreen(
                     ) {
                         Switch(
                             checked = dayEnabledStates[index].value,
-                            onCheckedChange = {
-                                dayEnabledStates[index].value = it
-                            }
+                            onCheckedChange = { dayEnabledStates[index].value = it }
                         )
 
-                        Text(
-                            day,
-                            modifier = Modifier.weight(1f)
-                        )
+                        Spacer(Modifier.width(12.dp))
+                        Text(day, modifier = Modifier.width(40.dp))
+                        Spacer(Modifier.width(16.dp))
 
                         if (dayEnabledStates[index].value) {
-                            Row(
-                                modifier = Modifier.weight(2f),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                OutlinedTextField(
-                                    value = dayStartTimesStates[index].value,
-                                    onValueChange = {
-                                        dayStartTimesStates[index].value = it
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+
+                                AssistChip(
+                                    onClick = {
+                                        activeDayIndex = index
+                                        pickingStart = true
+                                        parseTime(dayStartTimesStates[index].value)
+                                        showTimePicker = true
                                     },
-                                    label = { Text("Start") },
-                                    modifier = Modifier.weight(1f)
+                                    label = { Text(dayStartTimesStates[index].value) }
                                 )
 
-                                OutlinedTextField(
-                                    value = dayEndTimesStates[index].value,
-                                    onValueChange = {
-                                        dayEndTimesStates[index].value = it
+                                AssistChip(
+                                    onClick = {
+                                        activeDayIndex = index
+                                        pickingStart = false
+                                        parseTime(dayEndTimesStates[index].value)
+                                        showTimePicker = true
                                     },
-                                    label = { Text("End") },
-                                    modifier = Modifier.weight(1f)
+                                    label = { Text(dayEndTimesStates[index].value) }
                                 )
                             }
                         }
                     }
                 }
             }
+
+            /* ---------- Months / Days ---------- */
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -180,34 +226,26 @@ fun AddStudentScreen(
 
                 ExposedDropdownMenuBox(
                     expanded = expandedMonths,
-                    onExpandedChange = {
-                        expandedMonths = !expandedMonths
-                    }
+                    onExpandedChange = { expandedMonths = !expandedMonths }
                 ) {
                     OutlinedTextField(
                         value = months,
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Months") },
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expandedMonths)
-                        },
                         modifier = Modifier
-                            .width(80.dp)
-                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                            .width(90.dp)
+                            .menuAnchor()
                     )
-
                     ExposedDropdownMenu(
                         expanded = expandedMonths,
-                        onDismissRequest = {
-                            expandedMonths = false
-                        }
+                        onDismissRequest = { expandedMonths = false }
                     ) {
-                        (1..12).forEach { month ->
+                        (1..12).forEach {
                             DropdownMenuItem(
-                                text = { Text(month.toString()) },
+                                text = { Text(it.toString()) },
                                 onClick = {
-                                    months = month.toString()
+                                    months = it.toString()
                                     expandedMonths = false
                                 }
                             )
@@ -215,42 +253,30 @@ fun AddStudentScreen(
                     }
                 }
 
-                HorizontalDivider(
-                    modifier = Modifier
-                        .width(1.dp)
-                        .height(48.dp)
-                )
+                Spacer(Modifier.width(16.dp))
 
                 ExposedDropdownMenuBox(
                     expanded = expandedDays,
-                    onExpandedChange = {
-                        expandedDays = !expandedDays
-                    }
+                    onExpandedChange = { expandedDays = !expandedDays }
                 ) {
                     OutlinedTextField(
                         value = days,
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Days") },
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expandedDays)
-                        },
                         modifier = Modifier
-                            .width(80.dp)
-                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                            .width(90.dp)
+                            .menuAnchor()
                     )
-
                     ExposedDropdownMenu(
                         expanded = expandedDays,
-                        onDismissRequest = {
-                            expandedDays = false
-                        }
+                        onDismissRequest = { expandedDays = false }
                     ) {
-                        (0..30).forEach { day ->
+                        (0..30).forEach {
                             DropdownMenuItem(
-                                text = { Text(day.toString()) },
+                                text = { Text(it.toString()) },
                                 onClick = {
-                                    days = day.toString()
+                                    days = it.toString()
                                     expandedDays = false
                                 }
                             )
@@ -258,13 +284,18 @@ fun AddStudentScreen(
                     }
                 }
             }
-
-            if (errorMessage.isNotEmpty()) {
-                Text(
-                    text = errorMessage,
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
         }
+    }
+
+    /* ---------- Helper ---------- */
+    fun parseTime(time: String) {
+        val parts = time.split(" ")
+        val hm = parts[0].split(":")
+        var hour = hm[0].toInt()
+        val minute = hm[1].toInt()
+        if (parts[1] == "PM" && hour != 12) hour += 12
+        if (parts[1] == "AM" && hour == 12) hour = 0
+        pickerHour = hour
+        pickerMinute = minute
     }
 }

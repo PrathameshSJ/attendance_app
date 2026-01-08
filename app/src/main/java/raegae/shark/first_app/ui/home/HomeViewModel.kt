@@ -21,7 +21,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun markAttendance(studentId: Int, isPresent: Boolean) {
         viewModelScope.launch {
             val today = Calendar.getInstance().timeInMillis
-            attendanceDao.insert(Attendance(studentId = studentId, date = today, isPresent = isPresent))
+            attendanceDao.upsert(Attendance(studentId = studentId, date = today, isPresent = isPresent))
         }
     }
 }

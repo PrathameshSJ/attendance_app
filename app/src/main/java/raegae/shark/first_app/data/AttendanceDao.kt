@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface AttendanceDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(attendance: Attendance)
+    suspend fun upsert(attendance: Attendance)
 
     @Query("SELECT * FROM attendance WHERE studentId = :studentId")
     fun getAttendanceForStudent(studentId: Int): Flow<List<Attendance>>
