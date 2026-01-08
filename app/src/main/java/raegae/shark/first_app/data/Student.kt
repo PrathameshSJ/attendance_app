@@ -11,7 +11,8 @@ data class Student(
     val id: Int = 0,
     val name: String,
     val subject: String,
+    val subscriptionStartDate: Long,
     val subscriptionEndDate: Long,
-    val batchTime: String,
+    val batchTimes: Map<String, String>,
     val daysOfWeek: List<String>
 )

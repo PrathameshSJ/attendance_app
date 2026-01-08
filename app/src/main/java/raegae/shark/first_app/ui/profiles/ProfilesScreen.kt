@@ -22,29 +22,49 @@ import raegae.shark.first_app.getApplication
 import raegae.shark.first_app.viewmodels.ProfilesViewModel
 import raegae.shark.first_app.viewmodels.ProfilesViewModelFactory
 
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+
 @Composable
 fun ProfilesScreen(
     navController: NavController,
     profilesViewModel: ProfilesViewModel = viewModel(factory = ProfilesViewModelFactory(getApplication()))
 ) {
     val students by profilesViewModel.students.collectAsState(initial = emptyList())
+    var searchQuery by remember { mutableStateOf("") }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items(students) { student ->
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { navController.navigate("profile/${student.id}") }
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = student.name, style = MaterialTheme.typography.headlineSmall)
-                    Text(text = student.subject, style = MaterialTheme.typography.bodyMedium)
-                    Text(text = "Days: ${student.daysOfWeek.joinToString()}", style = MaterialTheme.typography.bodySmall)
+    val filteredStudents = students.filter {
+        it.name.contains(searchQuery, ignoreCase = true) || it.subject.contains(searchQuery, ignoreCase = true)
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            label = { Text("Search Students") },
+            modifier = Modifier.fillMaxWidth().padding(16.dp)
+        )
+
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(filteredStudents) { student ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { navController.navigate("profile/${student.id}") }
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(text = student.name, style = MaterialTheme.typography.headlineSmall)
+                        Text(text = student.subject, style = MaterialTheme.typography.bodyMedium)
+                        Text(text = "Days: ${student.daysOfWeek.joinToString()}", style = MaterialTheme.typography.bodySmall)
+                    }
                 }
             }
         }

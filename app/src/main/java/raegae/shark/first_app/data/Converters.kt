@@ -12,4 +12,18 @@ class Converters {
     fun fromList(list: List<String>): String {
         return list.joinToString(",")
     }
+
+    @TypeConverter
+    fun fromMapString(value: String): Map<String, String> {
+        if (value.isEmpty()) return emptyMap()
+        return value.split(",").associate {
+            val parts = it.split(":")
+            parts[0] to parts[1]
+        }
+    }
+
+    @TypeConverter
+    fun toMapString(map: Map<String, String>): String {
+        return map.entries.joinToString(",") { "${it.key}:${it.value}" }
+    }
 }

@@ -3,6 +3,7 @@ package raegae.shark.first_app.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import raegae.shark.first_app.data.AppDatabase
+import raegae.shark.first_app.data.Student
 
 class StudentProfileViewModel(private val database: AppDatabase, private val studentId: Int) : ViewModel() {
 
@@ -11,6 +12,10 @@ class StudentProfileViewModel(private val database: AppDatabase, private val stu
 
     suspend fun deleteStudent() {
         database.studentDao().deleteById(studentId)
+    }
+
+    suspend fun updateStudent(student: Student) {
+        database.studentDao().update(student)
     }
 }
 

@@ -19,7 +19,7 @@ class StudentProfileViewModel(application: Application, studentId: Int) : Androi
     val student: Flow<Student> = studentDao.getStudentById(studentId).stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = Student(id = 0, name = "", subject = "", subscriptionEndDate = 0, batchTime = "", daysOfWeek = emptyList())
+        initialValue = Student(id = 0, name = "", subject = "", subscriptionStartDate = 0, subscriptionEndDate = 0, batchTimes = emptyMap(), daysOfWeek = emptyList())
     )
 
     val attendance: Flow<List<Attendance>> = attendanceDao.getAttendanceForStudent(studentId).stateIn(
@@ -27,4 +27,8 @@ class StudentProfileViewModel(application: Application, studentId: Int) : Androi
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
+
+    suspend fun updateStudent(student: Student) {
+        studentDao.update(student)
+    }
 }

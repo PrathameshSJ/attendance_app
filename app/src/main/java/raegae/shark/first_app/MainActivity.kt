@@ -9,16 +9,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -30,6 +33,7 @@ import raegae.shark.first_app.ui.add.AddStudentScreen
 import raegae.shark.first_app.ui.home.HomeScreen
 import raegae.shark.first_app.ui.profile.StudentProfileScreen
 import raegae.shark.first_app.ui.profiles.ProfilesScreen
+import raegae.shark.first_app.ui.settings.SettingsScreen
 import raegae.shark.first_app.ui.theme.First_appTheme
 
 class MainActivity : ComponentActivity() {
@@ -38,14 +42,39 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             First_appTheme {
-                First_appApp()
+                FirstApp()
             }
         }
     }
 }
 
 @Composable
-fun First_appApp() {
+fun FabForRoute(
+    currentRoute: String?,
+    navController: NavController
+) {
+    when (currentRoute) {
+        AppDestinations.HOME.route -> {
+            FloatingActionButton(
+                onClick = { navController.navigate("add_student") }
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = "Add student")
+            }
+        }
+
+        AppDestinations.PROFILES.route -> {
+            FloatingActionButton(
+                onClick = { navController.navigate("settings") }
+            ) {
+                Icon(Icons.Filled.Settings, contentDescription = "Settings")
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
+@Composable
+fun FirstApp() {
     val navController = rememberNavController()
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentBackStackEntry?.destination?.route
@@ -77,13 +106,7 @@ fun First_appApp() {
     ) {
         Scaffold(
             floatingActionButton = {
-                if (currentRoute == AppDestinations.HOME.route) {
-                    FloatingActionButton(
-                        onClick = { navController.navigate("add_student") },
-                    ) {
-                        Icon(Icons.Filled.Add, "Add student")
-                    }
-                }
+                FabForRoute(currentRoute, navController)
             }
         ) { innerPadding ->
             NavHost(
@@ -91,15 +114,33 @@ fun First_appApp() {
                 startDestination = AppDestinations.HOME.route,
                 modifier = Modifier.padding(innerPadding)
             ) {
-                composable(AppDestinations.HOME.route) { HomeScreen(navController) }
-                composable(AppDestinations.PROFILES.route) { ProfilesScreen(navController) }
+                composable(AppDestinations.HOME.route) {
+                    HomeScreen()
+                }
+
+                composable(AppDestinations.PROFILES.route) {
+                    ProfilesScreen(navController)
+                }
+
+                composable("settings") {
+                    SettingsScreen()
+                }
+
                 composable(
                     route = "profile/{studentId}",
-                    arguments = listOf(navArgument("studentId") { type = NavType.IntType })
+                    arguments = listOf(
+                        navArgument("studentId") { type = NavType.IntType }
+                    )
                 ) { backStackEntry ->
-                    StudentProfileScreen(navController, studentId = backStackEntry.arguments?.getInt("studentId") ?: 0)
+                    StudentProfileScreen(
+                        navController = navController,
+                        studentId = backStackEntry.arguments?.getInt("studentId") ?: 0
+                    )
                 }
-                composable("add_student") { AddStudentScreen(navController) }
+
+                composable("add_student") {
+                    AddStudentScreen(navController)
+                }
             }
         }
     }
@@ -108,16 +149,16 @@ fun First_appApp() {
 enum class AppDestinations(
     val route: String,
     val label: String,
-    val icon: ImageVector,
+    val icon: ImageVector
 ) {
-    HOME("home", "Home", Icons.Default.Home),
-    PROFILES("profiles", "Students", Icons.Default.Person),
+    HOME("home", "Home", Icons.Filled.Home),
+    PROFILES("profiles", "Students", Icons.Filled.Person)
 }
 
 @Preview(showBackground = true)
 @Composable
-fun First_appAppPreview() {
+fun FirstAppPreview() {
     First_appTheme {
-        First_appApp()
+        FirstApp()
     }
 }

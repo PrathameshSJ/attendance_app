@@ -10,6 +10,9 @@ interface StudentDao {
     @Insert
     suspend fun insert(student: Student)
 
+    @androidx.room.Update
+    suspend fun update(student: Student)
+
     @Query("SELECT * FROM student")
     fun getAllStudents(): Flow<List<Student>>
 

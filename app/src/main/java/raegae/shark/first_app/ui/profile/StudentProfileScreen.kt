@@ -21,9 +21,18 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material.ExposedDropdownMenuBox
 import androidx.compose.material3.TextButton
+
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -52,17 +61,30 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun StudentProfileScreen(
     navController: NavController,
     studentId: Int,
     viewModel: StudentProfileViewModel = viewModel(factory = StudentProfileViewModelFactory(getApplication(), studentId))
 ) {
-    val student by viewModel.student.collectAsState(initial = Student(id = 0, name = "", subject = "", subscriptionEndDate = 0, batchTime = "", daysOfWeek = emptyList()))
+    val student by viewModel.student.collectAsState(initial = Student(id = 0, name = "", subject = "", subscriptionStartDate = 0, subscriptionEndDate = 0, batchTimes = emptyMap(), daysOfWeek = emptyList()))
     val attendance by viewModel.attendance.collectAsState(initial = emptyList())
     var currentMonth by remember { mutableStateOf(Calendar.getInstance()) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showRenewDialog by remember { mutableStateOf(false) }
+    val weekDays = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+    var renewMonths by remember { mutableStateOf("1") }
+    var renewDays by remember { mutableStateOf("0") }
+    var renewExpandedMonths by remember { mutableStateOf(false) }
+    var renewExpandedDays by remember { mutableStateOf(false) }
+    var renewDayEnabledStates = remember { weekDays.map { mutableStateOf(student.daysOfWeek.contains(it)) } }
+    var renewDayStartTimesStates = remember { weekDays.map { mutableStateOf(student.batchTimes[it]?.split(" - ")?.get(0) ?: "9:00 AM") } }
+    var renewDayEndTimesStates = remember { weekDays.map { mutableStateOf(student.batchTimes[it]?.split(" - ")?.get(1) ?: "10:00 AM") } }
     val coroutineScope = rememberCoroutineScope()
+
+    val subscriptionStartDate = student.subscriptionStartDate
+    val subscriptionEndDate = student.subscriptionEndDate
 
     Column(
         modifier = Modifier
@@ -71,12 +93,16 @@ fun StudentProfileScreen(
     ) {
         Text(text = student.name, style = MaterialTheme.typography.headlineMedium)
         Text(text = student.subject, style = MaterialTheme.typography.titleMedium)
-        Text(text = "Batch: ${student.batchTime} on ${student.daysOfWeek.joinToString()}", style = MaterialTheme.typography.bodyMedium)
+        Text(text = "Batch Times: ${student.batchTimes.entries.joinToString { "${it.key}: ${it.value}" }}", style = MaterialTheme.typography.bodyMedium)
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(onClick = { showDeleteDialog = true }) {
             Text("Delete Student")
+        }
+
+        Button(onClick = { showRenewDialog = true }) {
+            Text("Renew Subscription")
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -85,10 +111,145 @@ fun StudentProfileScreen(
             currentMonth = currentMonth,
             onMonthChange = { currentMonth = it },
             attendance = attendance,
+            subscriptionStartDate = student.subscriptionStartDate,
             subscriptionEndDate = student.subscriptionEndDate
         )
     }
-
+    if (showRenewDialog) {
+        AlertDialog(
+            onDismissRequest = { showRenewDialog = false },
+            title = { Text("Renew Subscription") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text("Extend subscription by:")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        ExposedDropdownMenuBox(
+                            expanded = renewExpandedMonths,
+                            onExpandedChange = { renewExpandedMonths = !renewExpandedMonths }
+                        ) {
+                            OutlinedTextField(
+                                value = renewMonths,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Months") },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = renewExpandedMonths) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            ExposedDropdownMenu(
+                                expanded = renewExpandedMonths,
+                                onDismissRequest = { renewExpandedMonths = false }
+                            ) {
+                                (1..12).forEach { month ->
+                                    DropdownMenuItem(
+                                        text = { Text(month.toString()) },
+                                        onClick = {
+                                            renewMonths = month.toString()
+                                            renewExpandedMonths = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        ExposedDropdownMenuBox(
+                            expanded = renewExpandedDays,
+                            onExpandedChange = { renewExpandedDays = !renewExpandedDays }
+                        ) {
+                            OutlinedTextField(
+                                value = renewDays,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Days") },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = renewExpandedDays) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            ExposedDropdownMenu(
+                                expanded = renewExpandedDays,
+                                onDismissRequest = { renewExpandedDays = false }
+                            ) {
+                                (0..30).forEach { day ->
+                                    DropdownMenuItem(
+                                        text = { Text(day.toString()) },
+                                        onClick = {
+                                            renewDays = day.toString()
+                                            renewExpandedDays = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Text("Update Batch Days:")
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        weekDays.forEach { day ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Switch(
+                                    checked = renewDayEnabledStates[weekDays.indexOf(day)].value,
+                                    onCheckedChange = { renewDayEnabledStates[weekDays.indexOf(day)].value = it }
+                                )
+                                Text(day, modifier = Modifier.weight(1f))
+                                if (renewDayEnabledStates[weekDays.indexOf(day)].value) {
+                                    Row(
+                                        modifier = Modifier.weight(2f),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        OutlinedTextField(
+                                            value = renewDayStartTimesStates[weekDays.indexOf(day)].value,
+                                            onValueChange = { renewDayStartTimesStates[weekDays.indexOf(day)].value = it },
+                                            label = { Text("Start") },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        OutlinedTextField(
+                                            value = renewDayEndTimesStates[weekDays.indexOf(day)].value,
+                                            onValueChange = { renewDayEndTimesStates[weekDays.indexOf(day)].value = it },
+                                            label = { Text("End") },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val monthsInt = renewMonths.toIntOrNull() ?: 0
+                    val daysInt = renewDays.toIntOrNull() ?: 0
+                    val calendar = Calendar.getInstance().apply { timeInMillis = subscriptionEndDate }
+                    calendar.add(Calendar.MONTH, monthsInt)
+                    calendar.add(Calendar.DAY_OF_MONTH, daysInt)
+                    val newEndDate = calendar.timeInMillis
+                    val newBatchTimes = weekDays.filterIndexed { index, _ -> renewDayEnabledStates[index].value }.associateWith { "${renewDayStartTimesStates[weekDays.indexOf(it)].value} - ${renewDayEndTimesStates[weekDays.indexOf(it)].value}" }
+                    val newDays = newBatchTimes.keys.toList()
+                    val updatedStudent = student.copy(subscriptionEndDate = newEndDate, batchTimes = newBatchTimes, daysOfWeek = newDays)
+                    coroutineScope.launch {
+                        viewModel.updateStudent(updatedStudent)
+                    }
+                    showRenewDialog = false
+                }) {
+                    Text("Renew")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRenewDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -114,8 +275,9 @@ fun StudentProfileScreen(
     }
 }
 
+
 @Composable
-fun AttendanceCalendar(currentMonth: Calendar, onMonthChange: (Calendar) -> Unit, attendance: List<Attendance>, subscriptionEndDate: Long) {
+fun AttendanceCalendar(currentMonth: Calendar, onMonthChange: (Calendar) -> Unit, attendance: List<Attendance>, subscriptionStartDate: Long, subscriptionEndDate: Long) {
     val monthFormatter = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -171,16 +333,14 @@ fun AttendanceCalendar(currentMonth: Calendar, onMonthChange: (Calendar) -> Unit
                 if (day.isNotEmpty()) {
                     val dayNumber = day.toInt()
                     val date = (currentMonth.clone() as Calendar).apply { set(Calendar.DAY_OF_MONTH, dayNumber) }
-                    val attendanceForDay = attendance.find { attendanceDate ->
+                    val attendanceForDay = if (date.timeInMillis >= subscriptionStartDate && date.timeInMillis <= subscriptionEndDate) attendance.find { attendanceDate ->
                         val cal = Calendar.getInstance().apply { timeInMillis = attendanceDate.date }
                         cal.get(Calendar.YEAR) == date.get(Calendar.YEAR) &&
                                 cal.get(Calendar.MONTH) == date.get(Calendar.MONTH) &&
                                 cal.get(Calendar.DAY_OF_MONTH) == date.get(Calendar.DAY_OF_MONTH)
-                    }
+                    } else null
 
-                    val isFuture = isFutureDate(dayNumber, currentMonth)
-
-                    val isExpired = date.timeInMillis > subscriptionEndDate
+                    val isExpired = date.timeInMillis > subscriptionEndDate || date.timeInMillis < subscriptionStartDate
 
                     Box(
                         modifier = Modifier
@@ -224,6 +384,7 @@ fun AttendanceCalendar(currentMonth: Calendar, onMonthChange: (Calendar) -> Unit
         }
     }
 }
+
 
 private fun isFutureDate(day: Int, currentMonth: Calendar): Boolean {
     val today = Calendar.getInstance()

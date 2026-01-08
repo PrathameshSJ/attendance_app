@@ -10,15 +10,16 @@ import raegae.shark.first_app.data.Student
 
 class AddStudentViewModel(private val database: AppDatabase) : ViewModel() {
 
-    suspend fun addStudentIfNotExists(name: String, subject: String, subscriptionEndDate: Long, batchTime: String, daysOfWeek: List<String>): Boolean {
+    suspend fun addStudentIfNotExists(name: String, subject: String, subscriptionStartDate: Long, subscriptionEndDate: Long, batchTimes: Map<String, String>, daysOfWeek: List<String>): Boolean {
         val students = database.studentDao().getAllStudents().first()
         val existing = students.find { it.name.equals(name, ignoreCase = true) }
         if (existing != null) return false
         val student = Student(
             name = name,
             subject = subject,
+            subscriptionStartDate = subscriptionStartDate,
             subscriptionEndDate = subscriptionEndDate,
-            batchTime = batchTime,
+            batchTimes = batchTimes,
             daysOfWeek = daysOfWeek
         )
         database.studentDao().insert(student)
