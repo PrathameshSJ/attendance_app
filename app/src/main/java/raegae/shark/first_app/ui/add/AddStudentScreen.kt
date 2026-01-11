@@ -145,176 +145,69 @@ fun AddStudentScreen(
                 }
             }
 
-                        /* ---------- Months / Days ---------- */
-
-
-
-
             Row(
-
                 modifier = Modifier.fillMaxWidth(),
-
                 horizontalArrangement = Arrangement.Center,
-
                 verticalAlignment = Alignment.CenterVertically
-
             ) {
 
-
-
                 ExposedDropdownMenuBox(
-
                     expanded = expandedMonths,
-
-
                     onExpandedChange = { expandedMonths = !expandedMonths }
-
-
-
                 ) {
-
                     OutlinedTextField(
-
                         value = months,
-
                         onValueChange = {},
-
                         readOnly = true,
-
                         label = { Text("Months") },
-
-
-
-
-                        modifier = Modifier
-
-
-                            .width(90.dp)
-
-
-                            .menuAnchor()
-
+                        modifier = Modifier.width(90.dp).menuAnchor()
                     )
 
-
                     ExposedDropdownMenu(
-
                         expanded = expandedMonths,
-
-
                         onDismissRequest = { expandedMonths = false }
-
-
-
                     ) {
-
-
                         (1..12).forEach {
-
                             DropdownMenuItem(
-
-
                                 text = { Text(it.toString()) },
-
                                 onClick = {
-
-
                                     months = it.toString()
-
                                     expandedMonths = false
-
                                 }
-
                             )
-
                         }
-
                     }
-
                 }
-
-
-
 
                 Spacer(Modifier.width(16.dp))
 
-
-
-
-
-
-
                 ExposedDropdownMenuBox(
-
                     expanded = expandedDays,
-
-
                     onExpandedChange = { expandedDays = !expandedDays }
-
-
-
                 ) {
-
                     OutlinedTextField(
-
                         value = days,
-
                         onValueChange = {},
-
                         readOnly = true,
-
                         label = { Text("Days") },
-
-
-
-
-                        modifier = Modifier
-
-
-                            .width(90.dp)
-
-
-                            .menuAnchor()
-
+                        modifier = Modifier.width(90.dp).menuAnchor()
                     )
 
-
                     ExposedDropdownMenu(
-
                         expanded = expandedDays,
-
-
                         onDismissRequest = { expandedDays = false }
-
-
-
                     ) {
-
-
                         (0..30).forEach {
-
                             DropdownMenuItem(
-
-
                                 text = { Text(it.toString()) },
-
                                 onClick = {
-
-
                                     days = it.toString()
-
                                     expandedDays = false
-
                                 }
-
                             )
-
                         }
-
                     }
-
                 }
-
             }
 
             if(error.isNotEmpty())
