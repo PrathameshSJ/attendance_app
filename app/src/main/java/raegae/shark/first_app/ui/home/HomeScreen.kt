@@ -183,7 +183,8 @@ fun StudentCard(
     val backgroundColor = when (todayAttendance?.isPresent) {
         true -> Color.Green.copy(alpha = 0.2f)
         false -> Color.Red.copy(alpha = 0.2f)
-        null -> MaterialTheme.colorScheme.surface
+        null -> Color.Gray.copy(alpha = 0.2f)
+        /*MaterialTheme.colorScheme.surface*/
     }
 
     Card(
