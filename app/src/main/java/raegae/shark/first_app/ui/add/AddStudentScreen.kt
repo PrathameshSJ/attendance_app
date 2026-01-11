@@ -145,41 +145,176 @@ fun AddStudentScreen(
                 }
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)){
+                        /* ---------- Months / Days ---------- */
 
-                ExposedDropdownMenuBox(expandedMonths,{expandedMonths=!expandedMonths}) {
+
+
+
+            Row(
+
+                modifier = Modifier.fillMaxWidth(),
+
+                horizontalArrangement = Arrangement.Center,
+
+                verticalAlignment = Alignment.CenterVertically
+
+            ) {
+
+
+
+                ExposedDropdownMenuBox(
+
+                    expanded = expandedMonths,
+
+
+                    onExpandedChange = { expandedMonths = !expandedMonths }
+
+
+
+                ) {
+
                     OutlinedTextField(
+
                         value = months,
-                        onValueChange = { _: String -> },
+
+                        onValueChange = {},
+
                         readOnly = true,
+
                         label = { Text("Months") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expandedMonths) }
+
+
+
+
+                        modifier = Modifier
+
+
+                            .width(90.dp)
+
+
+                            .menuAnchor()
+
                     )
-                    ExposedDropdownMenu(expandedMonths,{expandedMonths=false}) {
-                        (1..12).forEach{
-                            DropdownMenuItem(text={Text(it.toString())}, onClick={
-                                months=it.toString(); expandedMonths=false
-                            })
+
+
+                    ExposedDropdownMenu(
+
+                        expanded = expandedMonths,
+
+
+                        onDismissRequest = { expandedMonths = false }
+
+
+
+                    ) {
+
+
+                        (1..12).forEach {
+
+                            DropdownMenuItem(
+
+
+                                text = { Text(it.toString()) },
+
+                                onClick = {
+
+
+                                    months = it.toString()
+
+                                    expandedMonths = false
+
+                                }
+
+                            )
+
                         }
+
                     }
+
                 }
 
-                ExposedDropdownMenuBox(expandedDays,{expandedDays=!expandedDays}) {
+
+
+
+                Spacer(Modifier.width(16.dp))
+
+
+
+
+
+
+
+                ExposedDropdownMenuBox(
+
+                    expanded = expandedDays,
+
+
+                    onExpandedChange = { expandedDays = !expandedDays }
+
+
+
+                ) {
+
                     OutlinedTextField(
+
                         value = days,
-                        onValueChange = { _: String -> },
+
+                        onValueChange = {},
+
                         readOnly = true,
+
                         label = { Text("Days") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expandedDays) }
+
+
+
+
+                        modifier = Modifier
+
+
+                            .width(90.dp)
+
+
+                            .menuAnchor()
+
                     )
-                    ExposedDropdownMenu(expandedDays,{expandedDays=false}) {
-                        (0..30).forEach{
-                            DropdownMenuItem(text={Text(it.toString())}, onClick={
-                                days=it.toString(); expandedDays=false
-                            })
+
+
+                    ExposedDropdownMenu(
+
+                        expanded = expandedDays,
+
+
+                        onDismissRequest = { expandedDays = false }
+
+
+
+                    ) {
+
+
+                        (0..30).forEach {
+
+                            DropdownMenuItem(
+
+
+                                text = { Text(it.toString()) },
+
+                                onClick = {
+
+
+                                    days = it.toString()
+
+                                    expandedDays = false
+
+                                }
+
+                            )
+
                         }
+
                     }
+
                 }
+
             }
 
             if(error.isNotEmpty())
