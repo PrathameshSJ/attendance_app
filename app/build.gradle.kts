@@ -56,6 +56,10 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
+    implementation("androidx.compose.runtime:runtime-livedata:1.6.0")
+    implementation("androidx.compose.animation:animation-core:1.11.0-alpha02") // Use the latest version
+    implementation("androidx.datastore:datastore-preferences:1.2.0")
+    implementation("androidx.compose.ui:ui:1.10.0")
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

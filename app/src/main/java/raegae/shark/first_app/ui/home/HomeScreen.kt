@@ -11,6 +11,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.*
+import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import raegae.shark.first_app.data.Attendance
 import raegae.shark.first_app.data.Student
@@ -29,9 +31,16 @@ enum class AttendanceAction {
 
 @Composable
 fun HomeScreen(
+    navController: NavController,
     homeViewModel: HomeViewModel =
         viewModel(factory = HomeViewModelFactory(getApplication()))
 ) {
+
+    val backStackEntry = navController.currentBackStackEntryAsState().value
+    val addedStudentId =
+        backStackEntry?.savedStateHandle?.get<Int>("added_student")
+
+
     val students by homeViewModel.students.collectAsState(initial = emptyList())
     val allAttendance by homeViewModel.allAttendance.collectAsState(initial = emptyList())
     val scope = rememberCoroutineScope()
@@ -50,9 +59,27 @@ fun HomeScreen(
         Locale.getDefault()
     ) ?: "Mon"
 
-    val todaysStudents = students.filter { student ->
-        student.daysOfWeek.any { it.equals(today, ignoreCase = true) }
+    /* ---------- Scheduled students ---------- */
+    val scheduled = students.filter {
+        it.daysOfWeek.any { it.equals(today, true) }
     }
+
+    /* ---------- Pinned students (added manually) ---------- */
+    val pinnedStudents = remember { mutableStateListOf<Int>() }
+
+    LaunchedEffect(addedStudentId) {
+        if (addedStudentId != null) {
+            pinnedStudents.add(addedStudentId)
+            backStackEntry?.savedStateHandle?.remove<Int>("added_student")
+        }
+    }
+
+
+    val pinned = pinnedStudents.mapNotNull { id ->
+        students.find { it.id == id }
+    }
+
+    val todaysStudents = (scheduled + pinned).distinctBy { it.id }
 
     val attendanceMap = allAttendance.groupBy { it.studentId }
 
@@ -183,8 +210,7 @@ fun StudentCard(
     val backgroundColor = when (todayAttendance?.isPresent) {
         true -> Color.Green.copy(alpha = 0.2f)
         false -> Color.Red.copy(alpha = 0.2f)
-        null -> Color.Gray.copy(alpha = 0.2f)
-        /*MaterialTheme.colorScheme.surface*/
+        null -> Color.Gray.copy(alpha = 0.15f)
     }
 
     Card(

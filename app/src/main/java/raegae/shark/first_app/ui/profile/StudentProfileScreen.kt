@@ -2,6 +2,8 @@ package raegae.shark.first_app.ui.profile
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -47,10 +49,11 @@ fun StudentProfileScreen(
     var currentMonth by remember { mutableStateOf(Calendar.getInstance()) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showRenewDialog by remember { mutableStateOf(false) }
-
+/* 
     val weekDays = listOf("Mon","Tue","Wed","Thu","Fri","Sat","Sun")
 
     // -------- Renew State --------
+    
     var renewMonths by remember { mutableStateOf("1") }
     var renewDays by remember { mutableStateOf("0") }
     var expandedMonths by remember { mutableStateOf(false) }
@@ -68,7 +71,7 @@ fun StudentProfileScreen(
         weekDays.map {
             mutableStateOf(student.batchTimes[it]?.split(" - ")?.getOrNull(1) ?: "10:00 AM")
         }
-    }
+    }*/
 
     // ---------------- UI ----------------
 
@@ -166,7 +169,10 @@ fun StudentProfileScreen(
             onDismissRequest = { showRenewDialog = false },
             title = { Text("Renew Subscription") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 420.dp)   // keeps dialog from growing too big
+                .verticalScroll(rememberScrollState()),verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
                     OutlinedTextField(
                         value = subject,
