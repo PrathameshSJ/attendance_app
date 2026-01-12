@@ -65,19 +65,23 @@ fun HomeScreen(
     }
 
     /* ---------- Pinned students (added manually) ---------- */
-    val pinnedStudents = remember { mutableStateListOf<Int>() }
+    val pinnedStudents by homeViewModel.pinnedStudents.collectAsState(initial = emptySet())
+
 
     LaunchedEffect(addedStudentId) {
         if (addedStudentId != null) {
-            pinnedStudents.add(addedStudentId)
+            homeViewModel.pinStudent(addedStudentId)
             backStackEntry?.savedStateHandle?.remove<Int>("added_student")
         }
     }
 
 
-    val pinned = pinnedStudents.mapNotNull { id ->
-        students.find { it.id == id }
+    val pinned: List<Student> = pinnedStudents.mapNotNull { id ->
+        students.find { s -> s.id == id }
     }
+
+
+
 
     val todaysStudents = (scheduled + pinned).distinctBy { it.id }
 

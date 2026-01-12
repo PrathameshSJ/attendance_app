@@ -39,7 +39,7 @@ fun SettingsScreen() {
                 }
             },
             valueRange = 0.25f..2f,
-            steps = 7
+            steps = 5
         )
     }
 }

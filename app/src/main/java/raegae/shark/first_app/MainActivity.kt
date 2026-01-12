@@ -39,12 +39,7 @@ import androidx.navigation.compose.*
 import androidx.compose.animation.*
 import raegae.shark.first_app.ui.animation.scaledOffsetTween
 
-object HomePinnedStudents {
-    val ids = mutableStateListOf<Int>()
-    fun add(id: Int) {
-        if (!ids.contains(id)) ids.add(id)
-    }
-}
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
