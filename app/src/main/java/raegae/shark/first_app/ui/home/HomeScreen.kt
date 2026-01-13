@@ -36,9 +36,13 @@ fun HomeScreen(
         viewModel(factory = HomeViewModelFactory(getApplication()))
 ) {
 
-    val backStackEntry = navController.currentBackStackEntryAsState().value
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
     val addedStudentId =
-        backStackEntry?.savedStateHandle?.get<Int>("added_student")
+        navController.previousBackStackEntry
+
+            ?.savedStateHandle
+            ?.get<Int>("added_student")
+
 
 
     val students by homeViewModel.students.collectAsState(initial = emptyList())
@@ -71,13 +75,17 @@ fun HomeScreen(
     LaunchedEffect(addedStudentId) {
         if (addedStudentId != null) {
             homeViewModel.pinStudent(addedStudentId)
-            backStackEntry?.savedStateHandle?.remove<Int>("added_student")
+
+            navBackStackEntry
+                ?.savedStateHandle
+                ?.remove<Int>("added_student")
         }
     }
 
 
-    val pinned: List<Student> = pinnedStudents.mapNotNull { id ->
-        students.find { s -> s.id == id }
+
+    val pinned: List<Student> = pinnedStudents.mapNotNull { pinnedId ->
+        students.find { s -> s.id == pinnedId }
     }
 
 

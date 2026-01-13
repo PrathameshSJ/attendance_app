@@ -21,6 +21,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val _pinnedStudents = MutableStateFlow<Set<Int>>(emptySet())
     val pinnedStudents = _pinnedStudents.asStateFlow()
 
+    
+
     fun pinStudent(studentId: Int) {
         _pinnedStudents.value = _pinnedStudents.value + studentId
     }

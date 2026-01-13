@@ -90,6 +90,13 @@ fun FabForRoute(currentRoute: String?, navController: NavController) {
     }
 }
 
+val TabIndex = mapOf(
+    AppDestinations.HOME.route to 0,
+    AppDestinations.PROFILES.route to 1,
+    AppDestinations.SETTINGS.route to 2
+)
+
+
 /* ---------- App Scaffold ---------- */
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
@@ -98,6 +105,10 @@ fun FirstApp() {
     val animationSpeed = LocalAnimationSpeed.current
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
+    var currentTab by remember { mutableStateOf(AppDestinations.HOME.route) }
+    var previousTab by remember { mutableStateOf(AppDestinations.HOME.route) }
+
+
 
     fun navigateToRoot(root: String) {
         navController.navigate(root) {
@@ -117,7 +128,13 @@ fun FirstApp() {
                     icon = { Icon(dest.icon, dest.label) },
                     label = { Text(dest.label) },
                     selected = currentRoute == dest.route,
-                    onClick = { navigateToRoot(dest.route) }
+                    onClick = {
+                        if (dest.route != currentTab) {
+                        previousTab = currentTab
+                        currentTab = dest.route
+                    }
+                    navigateToRoot(dest.route)
+                    }
                 )
             }
         }
@@ -149,24 +166,25 @@ fun FirstApp() {
                 startDestination = AppDestinations.HOME.route,
                 Modifier.padding(padding),
                 enterTransition = {
-                    slideInHorizontally(
-                        animationSpec = scaledOffsetTween(300, animationSpeed)
-                    ) { it }
+                    val from = TabIndex[previousTab] ?: 0
+                    val to = TabIndex[currentTab] ?: 0
+                    if (to > from) slideInHorizontally(animationSpec = scaledOffsetTween(300, animationSpeed)) { it } else slideInHorizontally(animationSpec = scaledOffsetTween(300, animationSpeed)) { -it }
+                
                 },
                 exitTransition = {
-                    slideOutHorizontally(
-                        animationSpec = scaledOffsetTween(300, animationSpeed)
-                    ) { -it }
+                    val from = TabIndex[previousTab] ?: 0
+                    val to = TabIndex[currentTab] ?: 0
+                    if (to > from) slideOutHorizontally(animationSpec = scaledOffsetTween(300, animationSpeed)) { -it } else slideOutHorizontally(animationSpec = scaledOffsetTween(300, animationSpeed)) { it }
                 },
                 popEnterTransition = {
-                    slideInHorizontally(
-                        animationSpec = scaledOffsetTween(300, animationSpeed)
-                    ) { -it }
+                    val from = TabIndex[previousTab] ?: 0
+                    val to = TabIndex[currentTab] ?: 0
+                    if (to > from) slideInHorizontally(animationSpec = scaledOffsetTween(300, animationSpeed)) { it } else slideInHorizontally(animationSpec = scaledOffsetTween(300, animationSpeed)) { -it }
                 },
                 popExitTransition = {
-                    slideOutHorizontally(
-                        animationSpec = scaledOffsetTween(300, animationSpeed)
-                    ) { it }
+                    val from = TabIndex[previousTab] ?: 0
+                    val to = TabIndex[currentTab] ?: 0
+                    if (to > from) slideOutHorizontally(animationSpec = scaledOffsetTween(300, animationSpeed)) { -it } else slideOutHorizontally(animationSpec = scaledOffsetTween(300, animationSpeed)) { it }
                 }
                 
             ) {

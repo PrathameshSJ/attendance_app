@@ -38,41 +38,8 @@ fun SettingsScreen() {
                     settings.setAnimationSpeed(newSpeed)
                 }
             },
-            valueRange = 0.25f..2f,
-            steps = 5
+            valueRange = 0.25f..2.0f,
+            steps = 6
         )
     }
 }
-/* 
-@Composable
-fun SettingsScreen() {
-    val context = LocalContext.current
-    val dataStore = remember { SettingsDataStore(context) }
-    val scope = rememberCoroutineScope()
-
-    val animationSpeed by dataStore.animationSpeed.collectAsState(initial = 1f)
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("Settings", style = MaterialTheme.typography.headlineMedium)
-
-        Text("Animation Speed: ${"%.2f".format(animationSpeed)}x")
-
-        Slider(
-            value = animationSpeed,
-            onValueChange = { newSpeed ->
-                scope.launch {
-                    dataStore.setAnimationSpeed(newSpeed)
-                }
-            },
-            valueRange = 0.5f..3f,
-            steps = 9
-        )
-    }
-}
-*/
