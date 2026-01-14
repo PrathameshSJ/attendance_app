@@ -6,13 +6,13 @@ plugins {
 }
 
 android {
-    namespace = "raegae.shark.first_app"
+    namespace = "raegae.shark.attnow"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "raegae.shark.first_app"
+        applicationId = "raegae.shark.attnow"
         minSdk = 24
         targetSdk = 36
         versionCode = 1

@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "first_app"
+rootProject.name = "attnow"
 include(":app")

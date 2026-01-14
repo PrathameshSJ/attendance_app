@@ -1,4 +1,4 @@
-package raegae.shark.first_app
+package raegae.shark.attnow
 
 import org.junit.Test
 
