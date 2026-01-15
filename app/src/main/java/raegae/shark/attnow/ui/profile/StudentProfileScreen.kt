@@ -38,9 +38,9 @@ fun StudentProfileScreen(
         factory = StudentProfileViewModelFactory(getApplication(), studentId)
     )
 ) {
-    val student by viewModel.student.collectAsState(
-        initial = Student(0, "", "", 0, 0, emptyMap(), emptyList())
-    )
+    val student by viewModel.student.collectAsState()
+    val deleted by viewModel.deleted.collectAsState()
+
     val attendance by viewModel.attendance.collectAsState(initial = emptyList())
     val coroutineScope = rememberCoroutineScope()
 
@@ -74,6 +74,31 @@ fun StudentProfileScreen(
     }*/
 
     // ---------------- UI ----------------
+/* 
+    if (student == null) {
+        // loading state
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+*/
+
+    LaunchedEffect(Unit) {
+        viewModel.navigateBack.collect {
+            navController.popBackStack()
+        }
+    }
+
+    if (student == null) {
+        Box(
+            Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+        return
+    }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Row(
@@ -95,8 +120,8 @@ fun StudentProfileScreen(
 
         Spacer(Modifier.height(8.dp))
 
-        Text(student.name, style = MaterialTheme.typography.headlineMedium)
-        Text(student.subject, style = MaterialTheme.typography.titleMedium)
+        Text(student!!.name, style = MaterialTheme.typography.headlineMedium)
+        Text(student!!.subject, style = MaterialTheme.typography.titleMedium)
 
         Spacer(Modifier.height(16.dp))
 
@@ -114,33 +139,43 @@ fun StudentProfileScreen(
             currentMonth = currentMonth,
             onMonthChange = { currentMonth = it },
             attendance = attendance,
-            subscriptionStartDate = student.subscriptionStartDate,
-            subscriptionEndDate = student.subscriptionEndDate
+            subscriptionStartDate = student!!.subscriptionStartDate,
+            subscriptionEndDate = student!!.subscriptionEndDate
         )
     }
+
+    if (deleted) {
+        LaunchedEffect(Unit) {
+            navController.popBackStack()
+        }
+        return
+    }
+
+    
+
 
     // ---------------- RENEW ----------------
     if (showRenewDialog) {
 
-        var subject by remember { mutableStateOf(student.subject) }
+        var subject by remember { mutableStateOf(student!!.subject) }
 
         val weekDays = listOf("Mon","Tue","Wed","Thu","Fri","Sat","Sun")
 
         val renewEnabled = remember {
-            weekDays.map { mutableStateOf(student.daysOfWeek.contains(it)) }
+            weekDays.map { mutableStateOf(student!!.daysOfWeek.contains(it)) }
         }
 
         // Store time internally as hour+minute (NO strings)
         val renewStart = remember {
             weekDays.map {
-                val t = student.batchTimes[it]?.split(" - ")?.firstOrNull() ?: "9:00 AM"
+                val t = student!!.batchTimes[it]?.split(" - ")?.firstOrNull() ?: "9:00 AM"
                 parseTime(t)
             }.map { mutableStateOf(it) }
         }
 
         val renewEnd = remember {
             weekDays.map {
-                val t = student.batchTimes[it]?.split(" - ")?.getOrNull(1) ?: "10:00 AM"
+                val t = student!!.batchTimes[it]?.split(" - ")?.getOrNull(1) ?: "10:00 AM"
                 parseTime(t)
             }.map { mutableStateOf(it) }
         }
@@ -295,7 +330,7 @@ fun StudentProfileScreen(
                 TextButton(onClick = {
                     coroutineScope.launch {
                         val cal = Calendar.getInstance().apply {
-                            timeInMillis = student.subscriptionEndDate
+                            timeInMillis = student!!.subscriptionEndDate
                         }
                         cal.add(Calendar.MONTH, renewMonths.toInt())
                         cal.add(Calendar.DAY_OF_MONTH, renewDays.toInt())
@@ -307,7 +342,7 @@ fun StudentProfileScreen(
                         }
 
                         viewModel.updateStudent(
-                            student.copy(
+                            student!!.copy(
                                 subject = subject,
                                 subscriptionEndDate = cal.timeInMillis,
                                 daysOfWeek = newDays,
@@ -359,12 +394,13 @@ fun StudentProfileScreen(
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Delete Student") },
-            text = { Text("Delete ${student.name}? This cannot be undone.") },
+            text = { Text("Delete ${student!!.name}? This cannot be undone.") },
             confirmButton = {
                 TextButton(onClick = {
                     scope.launch {
+                        /*navController.popBackStack()*/
                         viewModel.deleteStudent()
-                        navController.popBackStack()
+                        
                     }
                     showDeleteDialog = false
                 }) { Text("Delete") }

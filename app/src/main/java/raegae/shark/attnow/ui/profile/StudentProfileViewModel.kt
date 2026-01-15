@@ -16,7 +16,7 @@ class StudentProfileViewModel(application: Application, studentId: Int) : Androi
     private val studentDao = db.studentDao()
     private val attendanceDao = db.attendanceDao()
 
-    val student: Flow<Student> = studentDao.getStudentById(studentId).stateIn(
+    val student: Flow<Student?> = studentDao.getStudentById(studentId).stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = Student(id = 0, name = "", subject = "", subscriptionStartDate = 0, subscriptionEndDate = 0, batchTimes = emptyMap(), daysOfWeek = emptyList())

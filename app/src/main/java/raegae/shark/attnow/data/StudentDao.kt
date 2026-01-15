@@ -17,8 +17,11 @@ interface StudentDao {
     fun getAllStudents(): Flow<List<Student>>
 
     @Query("SELECT * FROM student WHERE id = :studentId")
-    fun getStudentById(studentId: Int): Flow<Student>
+    fun getStudentById(studentId: Int): Flow<Student?>
 
-    @androidx.room.Query("DELETE FROM student WHERE id = :studentId")
+    @Query("DELETE FROM student WHERE id = :id")
+    suspend fun deleteStudentById(id: Int)
+
+    @Query("DELETE FROM student WHERE id = :studentId")
     suspend fun deleteById(studentId: Int)
 }
