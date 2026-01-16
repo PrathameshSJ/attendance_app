@@ -40,7 +40,7 @@ class HomeViewModel(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val pinnedIds: StateFlow<Set<Int>> =
-        settings.pinnedStudentsForToday()
+        settings.pinnedStudents
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
     val students: StateFlow<List<Student>> =
@@ -79,6 +79,13 @@ class HomeViewModel(
 
     fun markAttendance(studentId: Int, date: Long, isPresent: Boolean) =
         viewModelScope.launch {
+
+            // 🔥 CRITICAL FIX:
+            // Delete any existing attendance for that day first
+            database.attendanceDao().deleteAttendance(studentId, date)
+
+
+
             database.attendanceDao().upsert(
                 Attendance(
                     studentId = studentId,

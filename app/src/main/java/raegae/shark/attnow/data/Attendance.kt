@@ -5,6 +5,8 @@ import androidx.room.PrimaryKey
 import androidx.room.*
 
 @Entity(
+    tableName = "attendance",
+    primaryKeys = ["studentId", "date","isPresent"],
     foreignKeys = [
         ForeignKey(
             entity = Student::class,
@@ -16,21 +18,10 @@ import androidx.room.*
     indices = [Index("studentId")]
 )
 data class Attendance(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val studentId: Int,
     val date: Long,
     val isPresent: Boolean
 )
 
 
-/* 
-@Entity(
-    tableName = "attendance",
-    primaryKeys = ["studentId", "date"]
-)
-data class Attendance(
-    val studentId: Int,
-    val date: Long,
-    val isPresent: Boolean
-)
-*/
+

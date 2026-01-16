@@ -57,7 +57,7 @@ class SettingsDataStore(private val context: Context) {
     
 
 
-/* 
+ 
     val pinnedStudents: Flow<Set<Int>> = context.dataStore.data.map { prefs ->
         val today = todayKey()
         val last = prefs[LAST_CLEAR_DAY] ?: 0L
@@ -78,7 +78,7 @@ class SettingsDataStore(private val context: Context) {
         }
     }
 
-
+/*
     val pinnedStudents: Flow<Set<Int>> = context.dataStore.data.map { prefs ->
         val today = todayKey()
         val last = prefs[LAST_CLEAR_DAY] ?: 0L
@@ -93,23 +93,7 @@ class SettingsDataStore(private val context: Context) {
             prefs[PINNED_STUDENTS]?.map { it.toInt() }?.toSet() ?: emptySet()
         }
     }
-    suspend fun addPinned(day: Long, id: Int) {
-        context.dataStore.edit { prefs ->
-            val key = stringSetPreferencesKey("pinned_$day")
-            val current = prefs[key]?.toMutableSet() ?: mutableSetOf()
-            current.add(id.toString())
-            prefs[key] = current
-        }
-    }
-
-    suspend fun removePinned(day: Long, id: Int) {
-        context.dataStore.edit { prefs ->
-            val key = stringSetPreferencesKey("pinned_$day")
-            val current = prefs[key]?.toMutableSet() ?: mutableSetOf()
-            current.remove(id.toString())
-            prefs[key] = current
-        }
-    }
+   
 
 */
 
