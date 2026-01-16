@@ -28,15 +28,29 @@ fun AddExistingStudentScreen(
     val homeViewModel: HomeViewModel =
         viewModel(factory = HomeViewModelFactory(getApplication()))
 
-    val students by homeViewModel.allStudents.collectAsState(initial = emptyList())
+    val allStudents by homeViewModel.allStudents.collectAsState(initial = emptyList())
+
     var query by remember { mutableStateOf("") }
 
     val calendar = Calendar.getInstance()
-    val today = calendar.getDisplayName(Calendar.DAY_OF_WEEK, Calendar.SHORT, Locale.getDefault()) ?: "Mon"
+    val today = calendar.getDisplayName(
+        Calendar.DAY_OF_WEEK,
+        Calendar.SHORT,
+        Locale.getDefault()
+    ) ?: "Mon"
 
-    val available = students.filter {
-        !it.daysOfWeek.any { d -> d.equals(today, true) }
-    }
+    val available = allStudents
+        .filter { student ->
+            !student.daysOfWeek.any { day ->
+                day.equals(today, ignoreCase = true)
+            }
+        }
+        .filter { student ->
+            query.isBlank() ||
+            student.name.contains(query, ignoreCase = true) ||
+            student.subject.contains(query, ignoreCase = true)
+        }
+
 
 
     Scaffold(
@@ -59,7 +73,10 @@ fun AddExistingStudentScreen(
 
             OutlinedTextField(
                 value = query,
-                onValueChange = { query = it },
+                onValueChange = { 
+                    query = it 
+                    homeViewModel.updateSearch(it)
+                },
                 label = { Text("Search") },
                 modifier = Modifier.fillMaxWidth()
             )
@@ -68,6 +85,7 @@ fun AddExistingStudentScreen(
 
             LazyColumn {
                 items(available) { student ->
+                     
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()

@@ -38,6 +38,26 @@ class SettingsDataStore(private val context: Context) {
         return c.timeInMillis
     }
 
+    fun pinnedStudentsForToday(): Flow<Set<Int>> =
+        context.dataStore.data.map { prefs ->
+
+            val today = todayKey()
+            val last = prefs[LAST_CLEAR_DAY] ?: 0L
+
+            // If day changed → treat as empty
+            if (last != today) {
+                emptySet()
+            } else {
+                prefs[PINNED_STUDENTS]
+                    ?.map { it.toInt() }
+                    ?.toSet()
+                    ?: emptySet()
+            }
+        }
+    
+
+
+/* 
     val pinnedStudents: Flow<Set<Int>> = context.dataStore.data.map { prefs ->
         val today = todayKey()
         val last = prefs[LAST_CLEAR_DAY] ?: 0L
@@ -59,7 +79,7 @@ class SettingsDataStore(private val context: Context) {
     }
 
 
-    /*val pinnedStudents: Flow<Set<Int>> = context.dataStore.data.map { prefs ->
+    val pinnedStudents: Flow<Set<Int>> = context.dataStore.data.map { prefs ->
         val today = todayKey()
         val last = prefs[LAST_CLEAR_DAY] ?: 0L
 
@@ -72,7 +92,7 @@ class SettingsDataStore(private val context: Context) {
         } else {
             prefs[PINNED_STUDENTS]?.map { it.toInt() }?.toSet() ?: emptySet()
         }
-    }*//* 
+    }
     suspend fun addPinned(day: Long, id: Int) {
         context.dataStore.edit { prefs ->
             val key = stringSetPreferencesKey("pinned_$day")
@@ -92,6 +112,20 @@ class SettingsDataStore(private val context: Context) {
     }
 
 */
+
+    suspend fun ensureToday() {
+        val today = todayKey()
+
+        context.dataStore.edit { prefs ->
+            val last = prefs[LAST_CLEAR_DAY] ?: 0L
+            if (last != today) {
+                prefs[PINNED_STUDENTS] = emptySet()
+                prefs[LAST_CLEAR_DAY] = today
+            }
+        }
+    }
+
+
     suspend fun addPinned(id: Int) {
         context.dataStore.edit { prefs ->
             val set = prefs[PINNED_STUDENTS]?.toMutableSet() ?: mutableSetOf()
