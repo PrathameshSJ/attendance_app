@@ -160,7 +160,7 @@ fun AddStudentScreen(
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Months") },
-                        modifier = Modifier.width(90.dp).menuAnchor()
+                        modifier = Modifier.width(90.dp).menuAnchor(MenuAnchorType.PrimaryNotEditable)
                     )
 
                     ExposedDropdownMenu(
@@ -190,7 +190,7 @@ fun AddStudentScreen(
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Days") },
-                        modifier = Modifier.width(90.dp).menuAnchor()
+                        modifier = Modifier.width(90.dp).menuAnchor(MenuAnchorType.PrimaryNotEditable)
                     )
 
                     ExposedDropdownMenu(

@@ -24,4 +24,6 @@ interface StudentDao {
 
     @Query("DELETE FROM student WHERE id = :studentId")
     suspend fun deleteById(studentId: Int)
+
+    
 }
