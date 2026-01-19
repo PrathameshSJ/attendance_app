@@ -17,6 +17,10 @@ interface AttendanceDao {
     @Query("SELECT * FROM attendance")
     fun getAllAttendance(): Flow<List<Attendance>>
 
+    @Query("SELECT * FROM attendance")
+    suspend fun getAllAttendanceOnce(): List<Attendance>
+
+
     @Query("DELETE FROM attendance WHERE studentId = :studentId AND date = :date")
     suspend fun deleteAttendance(studentId: Int, date: Long)
 }

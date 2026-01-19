@@ -18,7 +18,7 @@ class SettingsViewModel(
 
     private val context = application.applicationContext
     private val database = AppDatabase.getDatabase(application)
-    private val excelManager = AttendanceExcelManager(context)
+    private val excelManager = AttendanceExcelManager(context,database)
 
     /* ---------- UI State ---------- */
 
