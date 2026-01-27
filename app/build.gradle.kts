@@ -59,6 +59,8 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("org.dhatim:fastexcel:0.19.0")
     implementation("org.dhatim:fastexcel-reader:0.19.0")
+    implementation("com.fasterxml:aalto-xml:1.3.2")
+    implementation("javax.xml.stream:stax-api:1.0-2")
     implementation("androidx.compose.runtime:runtime-livedata:1.6.0")
     implementation("androidx.compose.animation:animation-core:1.11.0-alpha02") // Use the latest version
     implementation("androidx.datastore:datastore-preferences:1.2.0")

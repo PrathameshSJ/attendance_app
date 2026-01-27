@@ -10,4 +10,15 @@ object AppGlobalState {
     fun setImporting(importing: Boolean) {
         _isImporting.value = importing
     }
+
+    private val _importResultLog = MutableStateFlow<String?>(null)
+    val importResultLog = _importResultLog.asStateFlow()
+
+    fun setImportResult(log: String) {
+        _importResultLog.value = log
+    }
+
+    fun clearImportResult() {
+        _importResultLog.value = null
+    }
 }

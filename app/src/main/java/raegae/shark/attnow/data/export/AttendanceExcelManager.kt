@@ -26,7 +26,7 @@ class AttendanceExcelManager(
         ).export(uri)
     }
 
-    suspend fun import(uri: Uri) {
-        AttendanceExcelImporter(context, database).import(uri)
+    suspend fun import(file: java.io.File): ImportResult {
+        return AttendanceExcelImporter(context, database).import(file)
     }
 }

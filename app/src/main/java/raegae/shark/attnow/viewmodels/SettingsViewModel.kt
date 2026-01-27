@@ -8,18 +8,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import raegae.shark.attnow.data.AppDatabase
-import raegae.shark.attnow.data.export.AttendanceExcelManager
 import raegae.shark.attnow.data.AppGlobalState
+import raegae.shark.attnow.data.export.AttendanceExcelManager
 
-class SettingsViewModel(
-    application: Application
-) : AndroidViewModel(application) {
+class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
     /* ---------- Dependencies ---------- */
 
     private val context = application.applicationContext
     private val database = AppDatabase.getDatabase(application)
-    private val excelManager = AttendanceExcelManager(context,database)
+    private val excelManager = AttendanceExcelManager(context, database)
 
     /* ---------- UI State ---------- */
 
@@ -32,6 +30,25 @@ class SettingsViewModel(
     private val _importSuccess = MutableStateFlow(false)
     val importSuccess: StateFlow<Boolean> = _importSuccess
 
+    private val _importLog = MutableStateFlow<String?>(null)
+    val importLog: StateFlow<String?> = _importLog
+
+    val importReport = AppGlobalState.importResultLog
+
+    fun confirmRestart() {
+        _importSuccess.value = true
+        _importLog.value = null
+        AppGlobalState.clearImportResult()
+    }
+
+    fun clearLocalLog() {
+        _importLog.value = null
+    }
+
+    fun clearError() {
+        _error.value = null
+    }
+
     /* ---------- EXPORT ---------- */
 
     fun exportAttendance(uri: Uri) {
@@ -42,13 +59,8 @@ class SettingsViewModel(
             try {
                 val students = database.studentDao().getAllStudents()
                 val attendance = database.attendanceDao().getAllAttendance()
-                
 
-                excelManager.exportAll(
-                    uri = uri,
-                    student = students,
-                    attendance = attendance
-                )
+                excelManager.exportAll(uri = uri, student = students, attendance = attendance)
             } catch (e: Exception) {
                 _error.value = e.message
             } finally {
@@ -63,7 +75,6 @@ class SettingsViewModel(
      * Current behavior:
      * - call the fun, it handles everything
      */
-
     fun importAttendance(uri: Uri) {
         viewModelScope.launch {
             _isBusy.value = true
@@ -71,19 +82,36 @@ class SettingsViewModel(
             AppGlobalState.setImporting(true)
 
             try {
-                excelManager.import(uri)
-                _importSuccess.value = true
-            } catch (e: Exception) {
-                _error.value = e.message
-                AppGlobalState.setImporting(false) // Only unfreeze on error
+
+                // Copy to local file to prevent read errors and allow background processing
+                val baseDir = context.getExternalFilesDir(null) ?: context.filesDir
+                val importsDir = java.io.File(baseDir, "imports")
+                if (!importsDir.exists()) importsDir.mkdirs()
+                val file = java.io.File(importsDir, "pending_import.xlsx")
+
+                android.util.Log.d("SettingsVM", "Starting Copy to ${file.absolutePath}")
+
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    file.outputStream().use { output -> input.copyTo(output) }
+                }
+                        ?: throw Exception("Could not read source file")
+
+                android.util.Log.d("SettingsVM", "Copy Success. Queued for Background Watcher.")
+
+                // Show log to user
+                _importLog.value =
+                        "File Queued for Background Import.\nPlease wait up to 5 seconds for the process to start..."
+            } catch (t: Throwable) {
+                android.util.Log.e("SettingsVM", "Queue Failed", t)
+                _error.value = "Queue Failed: ${t.message}"
+                // AppGlobalState.setImporting(false) // Not setting it here
             } finally {
                 _isBusy.value = false
             }
         }
     }
-
-
 }
+
 /*
     fun importAttendance(uri: Uri) {
         viewModelScope.launch {
