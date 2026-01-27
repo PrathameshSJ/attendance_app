@@ -17,6 +17,9 @@ interface AttendanceDao {
     @Query("SELECT * FROM attendance WHERE studentId IN (:studentIds) ORDER BY date ASC")
     fun getAttendanceForStudents(studentIds: List<Int>): Flow<List<Attendance>>
 
+    @Query("SELECT * FROM attendance WHERE studentId IN (:studentIds) ORDER BY date ASC")
+    suspend fun getAttendanceForStudentsOnce(studentIds: List<Int>): List<Attendance>
+
     @Query("SELECT * FROM attendance WHERE studentId = :studentId ORDER BY date ASC")
     fun getAttendanceForStudent(studentId: Int): Flow<List<Attendance>>
 

@@ -15,6 +15,9 @@ import raegae.shark.attnow.data.util.StudentKey
 import raegae.shark.attnow.getApplication
 import raegae.shark.attnow.viewmodels.HomeViewModel
 import raegae.shark.attnow.viewmodels.HomeViewModelFactory
+import raegae.shark.attnow.data.AppGlobalState
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.background
 
 @Composable
 fun AddExistingStudentScreen(
@@ -24,6 +27,17 @@ fun AddExistingStudentScreen(
     val viewModel: HomeViewModel = viewModel(
         factory = HomeViewModelFactory(getApplication())
     )
+
+    val isImporting by AppGlobalState.isImporting.collectAsState()
+    if (isImporting) {
+         Box(
+            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+        return
+    }
 
     val students by viewModel.availableForPinning.collectAsState()
 

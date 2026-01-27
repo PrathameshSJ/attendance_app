@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import raegae.shark.attnow.data.AppDatabase
 import raegae.shark.attnow.data.export.AttendanceExcelManager
+import raegae.shark.attnow.data.AppGlobalState
 
 class SettingsViewModel(
     application: Application
@@ -27,6 +28,9 @@ class SettingsViewModel(
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
+
+    private val _importSuccess = MutableStateFlow(false)
+    val importSuccess: StateFlow<Boolean> = _importSuccess
 
     /* ---------- EXPORT ---------- */
 
@@ -64,17 +68,14 @@ class SettingsViewModel(
         viewModelScope.launch {
             _isBusy.value = true
             _error.value = null
+            AppGlobalState.setImporting(true)
 
             try {
-                val importer = excelManager
-                val records = importer.import(uri)
-
-                for (attendance in records) {
-                    database.attendanceDao().upsert(attendance)
-                }
-
+                excelManager.import(uri)
+                _importSuccess.value = true
             } catch (e: Exception) {
                 _error.value = e.message
+                AppGlobalState.setImporting(false) // Only unfreeze on error
             } finally {
                 _isBusy.value = false
             }

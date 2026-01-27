@@ -30,6 +30,7 @@ import raegae.shark.attnow.viewmodels.StudentProfileViewModelFactory
 import java.text.SimpleDateFormat
 import raegae.shark.attnow.data.model.LogicalStudent
 import java.util.*
+import raegae.shark.attnow.data.AppGlobalState
 
 @OptIn(ExperimentalMaterial3Api::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @Composable
@@ -45,6 +46,17 @@ fun StudentProfileScreen(
             studentKey = studentKey
         )
     )
+
+    val isImporting by AppGlobalState.isImporting.collectAsState()
+    if (isImporting) {
+         Box(
+            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+        return
+    }
 
     StudentProfileContent(
         navController = navController,

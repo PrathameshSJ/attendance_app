@@ -56,10 +56,14 @@ class AttendanceExcelExporter(
             val bySubject = students.groupBy { it.subject }
             val attendanceByStudent = attendance.groupBy { it.studentId }
 
-
-            
-
-
+            // 🔹 ENTITIES SHEET (First) for Restore
+            val entSheet = workbook.newWorksheet("Entities")
+            writeAttributesHeader(entSheet)
+            var entRow = 1
+            students.forEach { s ->
+                writeAttributesRow(entSheet, entRow++, s)
+            }
+            entSheet.finish()
             
             bySubject.forEach { (subject, subjectStudents) ->
 
@@ -144,9 +148,9 @@ class AttendanceExcelExporter(
                         sheet.style(startRow, 0).verticalAlignment("center").set()
                         sheet.style(startRow, 1).verticalAlignment("center").set()
                         sheet.style(startRow, 2).verticalAlignment("center").set()
-                }
-            }
-        }
+                } // End student loop
+            } // End subject loop
+        } // End workbook use
 
         outputStream.flush()
         outputStream.close()
@@ -195,4 +199,29 @@ class AttendanceExcelExporter(
         return batchTimes.entries.joinToString(" | ") { (day, time) ->
             "$day: $time"
         }
-    }}
+    }
+
+    private fun writeAttributesHeader(sheet: Worksheet) {
+        sheet.value(0, 0, "ID")
+        sheet.value(0, 1, "Name")
+        sheet.value(0, 2, "Subject")
+        sheet.value(0, 3, "StartDate")
+        sheet.value(0, 4, "EndDate")
+        sheet.value(0, 5, "Days")
+        sheet.value(0, 6, "Times")
+    }
+
+    private fun writeAttributesRow(sheet: Worksheet, r: Int, s: raegae.shark.attnow.data.Student) {
+        val fmt = DateTimeFormatter.ISO_LOCAL_DATE
+        val start = java.time.Instant.ofEpochMilli(s.subscriptionStartDate).atZone(java.time.ZoneId.systemDefault()).toLocalDate().format(fmt)
+        val end = java.time.Instant.ofEpochMilli(s.subscriptionEndDate).atZone(java.time.ZoneId.systemDefault()).toLocalDate().format(fmt)
+
+        sheet.value(r, 0, s.id)
+        sheet.value(r, 1, s.name)
+        sheet.value(r, 2, s.subject)
+        sheet.value(r, 3, start)
+        sheet.value(r, 4, end)
+        sheet.value(r, 5, s.daysOfWeek.joinToString(","))
+        sheet.value(r, 6, formatBatchTimes(s.batchTimes))
+    }
+}
