@@ -1,29 +1,42 @@
 package raegae.shark.attnow.data
 
 import androidx.room.TypeConverter
+import org.json.JSONObject
+import org.json.JSONArray
 
 class Converters {
+
+    /* ---------- Map<String, String> ---------- */
+
     @TypeConverter
-    fun fromString(value: String): List<String> {
-        return value.split(",").map { it.trim() }
+    fun fromStringMap(map: Map<String, String>?): String {
+        if (map == null) return "{}"
+        return JSONObject(map).toString()
     }
 
     @TypeConverter
-    fun fromList(list: List<String>): String {
-        return list.joinToString(",")
-    }
-
-    @TypeConverter
-    fun fromMapString(value: String): Map<String, String> {
-        if (value.isEmpty()) return emptyMap()
-        return value.split(",").associate {
-            val parts = it.split(":")
-            parts[0] to parts[1]
+    fun toStringMap(value: String?): Map<String, String> {
+        if (value.isNullOrBlank()) return emptyMap()
+        val json = JSONObject(value)
+        val result = mutableMapOf<String, String>()
+        json.keys().forEach { key ->
+            result[key] = json.getString(key)
         }
+        return result
+    }
+
+    /* ---------- List<String> ---------- */
+
+    @TypeConverter
+    fun fromStringList(list: List<String>?): String {
+        if (list == null) return "[]"
+        return JSONArray(list).toString()
     }
 
     @TypeConverter
-    fun toMapString(map: Map<String, String>): String {
-        return map.entries.joinToString(",") { "${it.key}:${it.value}" }
+    fun toStringList(value: String?): List<String> {
+        if (value.isNullOrBlank()) return emptyList()
+        val array = JSONArray(value)
+        return List(array.length()) { i -> array.getString(i) }
     }
 }

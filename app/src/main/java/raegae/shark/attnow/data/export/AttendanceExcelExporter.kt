@@ -117,8 +117,11 @@ class AttendanceExcelExporter(
                                 cal.get(Calendar.MONTH) + 1
                             )
 
+                            val prefix = if (entry.isPresent) "P" else "A"
+                            val finalText = "$prefix($text)"
+
                             val col = 3 + day
-                            sheet.value(rowIndex, col, text)
+                            sheet.value(rowIndex, col, finalText)
 
                             // ✅ FastExcel coloring (THIS is the right way)
                             if (entry.isPresent) {

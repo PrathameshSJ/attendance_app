@@ -57,10 +57,33 @@ class SettingsViewModel(
 
     /**
      * Current behavior:
-     * - Merge attendance only
-     * - Students are NOT overwritten
-     * - Future: conflict resolution per student
+     * - call the fun, it handles everything
      */
+
+    fun importAttendance(uri: Uri) {
+        viewModelScope.launch {
+            _isBusy.value = true
+            _error.value = null
+
+            try {
+                val importer = excelManager
+                val records = importer.import(uri)
+
+                for (attendance in records) {
+                    database.attendanceDao().upsert(attendance)
+                }
+
+            } catch (e: Exception) {
+                _error.value = e.message
+            } finally {
+                _isBusy.value = false
+            }
+        }
+    }
+
+
+}
+/*
     fun importAttendance(uri: Uri) {
         viewModelScope.launch {
             _isBusy.value = true
@@ -80,3 +103,4 @@ class SettingsViewModel(
         }
     }
 }
+*/

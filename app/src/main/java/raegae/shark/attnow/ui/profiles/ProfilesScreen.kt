@@ -58,7 +58,9 @@ fun ProfilesScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { navController.navigate("profile/${student.id}") }
+                        .clickable { 
+                            navController.navigate("profile/${student.name}/${student.subject}") 
+                        }
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(text = student.name, style = MaterialTheme.typography.headlineSmall)

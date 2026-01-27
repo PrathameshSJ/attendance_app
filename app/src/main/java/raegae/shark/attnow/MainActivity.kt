@@ -38,6 +38,7 @@ import raegae.shark.attnow.ui.theme.LocalAnimationSpeed
 import androidx.navigation.compose.*
 import androidx.compose.animation.*
 import raegae.shark.attnow.ui.animation.scaledOffsetTween
+import raegae.shark.attnow.data.util.StudentKey
 
 
 
@@ -206,25 +207,30 @@ fun FirstApp() {
                 }
 
                 composable("add_existing") { backStack ->
-                    val nav = navController
 
                     AddExistingStudentScreen(
-                        navController = nav,
-                        onStudentSelected = { studentId ->
-                            nav.previousBackStackEntry
+                        navController = navController,
+                        onStudentSelected = { key: StudentKey ->
+                            navController.previousBackStackEntry
                                 ?.savedStateHandle
-                                ?.set("added_student", studentId)
+                                ?.set("added_student", key)
                         }
                     )
                 }
 
                 composable(
-                    "profile/{studentId}",
-                    arguments = listOf(navArgument("studentId") { type = NavType.IntType })
+                    "profile/{name}/{subject}",
+                    arguments = listOf(
+                        navArgument("name") { type = NavType.StringType },
+                        navArgument("subject") { type = NavType.StringType }
+                    )
                 ) {
+                    val name = it.arguments?.getString("name") ?: ""
+                    val subject = it.arguments?.getString("subject") ?: ""
+                    
                     StudentProfileScreen(
                         navController,
-                        it.arguments!!.getInt("studentId")
+                        StudentKey(name, subject)
                     )
                 }
             }

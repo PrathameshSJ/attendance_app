@@ -6,16 +6,11 @@ import androidx.room.*
 
 @Entity(
     tableName = "attendance",
-    primaryKeys = ["studentId", "date","isPresent"],
-    foreignKeys = [
-        ForeignKey(
-            entity = Student::class,
-            parentColumns = ["id"],
-            childColumns = ["studentId"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ],
-    indices = [Index("studentId")]
+    primaryKeys = ["studentId", "date"],
+    indices = [
+        Index("studentId"),
+        Index("date")
+    ]
 )
 data class Attendance(
     val studentId: Int,

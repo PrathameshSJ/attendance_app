@@ -1,7 +1,5 @@
 package raegae.shark.attnow.ui.home
 
-import androidx.compose.material.icons.*
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,98 +10,75 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import raegae.shark.attnow.data.Student
+import raegae.shark.attnow.data.model.LogicalStudent
+import raegae.shark.attnow.data.util.StudentKey
 import raegae.shark.attnow.getApplication
 import raegae.shark.attnow.viewmodels.HomeViewModel
 import raegae.shark.attnow.viewmodels.HomeViewModelFactory
-import java.util.Calendar
-import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddExistingStudentScreen(
     navController: NavController,
-    onStudentSelected: (Int) -> Unit
+    onStudentSelected: (StudentKey) -> Unit
 ) {
-    val homeViewModel: HomeViewModel =
-        viewModel(factory = HomeViewModelFactory(getApplication()))
+    val viewModel: HomeViewModel = viewModel(
+        factory = HomeViewModelFactory(getApplication())
+    )
 
-    val allStudents by homeViewModel.allStudents.collectAsState(initial = emptyList())
+    val students by viewModel.availableForPinning.collectAsState()
 
     var query by remember { mutableStateOf("") }
 
-    val calendar = Calendar.getInstance()
-    val today = calendar.getDisplayName(
-        Calendar.DAY_OF_WEEK,
-        Calendar.SHORT,
-        Locale.getDefault()
-    ) ?: "Mon"
+    Column(Modifier.fillMaxSize().padding(16.dp)) {
 
-    val available = allStudents
-        .filter { student ->
-            !student.daysOfWeek.any { day ->
-                day.equals(today, ignoreCase = true)
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            label = { Text("Search student") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(
+                students.filter {
+                    query.isBlank() ||
+                    it.name.contains(query, true) ||
+                    it.subject.contains(query, true)
+                }
+            ) { student ->
+
+                ExistingStudentRow(
+                    student = student,
+                    onClick = {
+                        onStudentSelected(
+                            StudentKey(
+                                name = student.name,
+                                subject = student.subject
+                            )
+                        )
+                        navController.popBackStack()
+                    }
+                )
             }
         }
-        .filter { student ->
-            query.isBlank() ||
-            student.name.contains(query, ignoreCase = true) ||
-            student.subject.contains(query, ignoreCase = true)
-        }
+    }
+}
 
-
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Add student to today") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                    }
-                }
-            )
-        }
-    ) { pad ->
-        Column(
-            Modifier
-                .padding(pad)
-                .padding(16.dp)
-        ) {
-
-            OutlinedTextField(
-                value = query,
-                onValueChange = { 
-                    query = it 
-                    homeViewModel.updateSearch(it)
-                },
-                label = { Text("Search") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            LazyColumn {
-                items(available) { student ->
-                     
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(6.dp)
-                            .clickable {
-                                onStudentSelected(student.id)
-                                navController.popBackStack()
-                            },
-                        elevation = CardDefaults.cardElevation(2.dp)
-                    ) {
-                        Column(Modifier.padding(12.dp)) {
-                            Text(student.name, style = MaterialTheme.typography.titleMedium)
-                            Text(student.subject, style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                }
-            }
-
+@Composable
+private fun ExistingStudentRow(
+    student: LogicalStudent,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text(student.name, style = MaterialTheme.typography.titleMedium)
+            Text(student.subject, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

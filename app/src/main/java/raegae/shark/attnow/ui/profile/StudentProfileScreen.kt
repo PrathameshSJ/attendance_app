@@ -23,22 +23,44 @@ import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import raegae.shark.attnow.data.Attendance
 import raegae.shark.attnow.data.Student
+import raegae.shark.attnow.data.util.StudentKey
 import raegae.shark.attnow.getApplication
 import raegae.shark.attnow.viewmodels.StudentProfileViewModel
 import raegae.shark.attnow.viewmodels.StudentProfileViewModelFactory
 import java.text.SimpleDateFormat
+import raegae.shark.attnow.data.model.LogicalStudent
 import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @Composable
 fun StudentProfileScreen(
     navController: NavController,
-    studentId: Int,
-    viewModel: StudentProfileViewModel = viewModel(
-        factory = StudentProfileViewModelFactory(getApplication(), studentId)
-    )
+    studentKey: StudentKey
 ) {
-    val student by viewModel.student.collectAsState()
+    val context = getApplication()
+
+    val viewModel: StudentProfileViewModel = viewModel(
+        factory = StudentProfileViewModelFactory(
+            application = context,
+            studentKey = studentKey
+        )
+    )
+
+    StudentProfileContent(
+        navController = navController,
+        viewModel = viewModel
+    )
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+@Composable
+private fun StudentProfileContent(
+    navController: NavController,
+    viewModel: StudentProfileViewModel
+    )
+     {
+    val student by viewModel.student.collectAsState(initial = null)
     val deleted by viewModel.deleted.collectAsState()
 
     val attendance by viewModel.attendance.collectAsState(initial = emptyList())
@@ -139,8 +161,7 @@ fun StudentProfileScreen(
             currentMonth = currentMonth,
             onMonthChange = { currentMonth = it },
             attendance = attendance,
-            subscriptionStartDate = student!!.subscriptionStartDate,
-            subscriptionEndDate = student!!.subscriptionEndDate
+            subscriptionRanges = student!!.subscriptionRanges
         )
     }
 
@@ -329,8 +350,21 @@ fun StudentProfileScreen(
             confirmButton = {
                 TextButton(onClick = {
                     coroutineScope.launch {
+                        val now = Calendar.getInstance()
+                        val oldEnd = student!!.subscriptionEndDate
+                        val inputSubject = subject.trim()
+                        val subjectChanged = inputSubject != student!!.subject.trim()
+                        
+                        // If renewing significantly after expiration OR changing subject, start fresh from NOW.
+                        // Otherwise start from old end (contiguous).
+                        val start = if (subjectChanged || now.timeInMillis > oldEnd + 86400000L) {
+                            now.timeInMillis
+                        } else {
+                            oldEnd
+                        }
+
                         val cal = Calendar.getInstance().apply {
-                            timeInMillis = student!!.subscriptionEndDate
+                            timeInMillis = start
                         }
                         cal.add(Calendar.MONTH, renewMonths.toInt())
                         cal.add(Calendar.DAY_OF_MONTH, renewDays.toInt())
@@ -341,14 +375,14 @@ fun StudentProfileScreen(
                             "${formatTime(renewStart[i].value)} - ${formatTime(renewEnd[i].value)}"
                         }
 
-                        viewModel.updateStudent(
-                            student!!.copy(
-                                subject = subject,
-                                subscriptionEndDate = cal.timeInMillis,
-                                daysOfWeek = newDays,
-                                batchTimes = newTimes
-                            )
+                        viewModel.renewStudent(
+                            newSubject = inputSubject,
+                            newStartDate = start,
+                            newEndDate = cal.timeInMillis,
+                            newDaysOfWeek = newDays,
+                            newBatchTimes = newTimes
                         )
+
                     }
                     showRenewDialog = false
                 }) { Text("Renew") }
@@ -412,7 +446,12 @@ fun StudentProfileScreen(
     }
 }
 @Composable
-fun AttendanceCalendar(currentMonth: Calendar, onMonthChange: (Calendar) -> Unit, attendance: List<Attendance>, subscriptionStartDate: Long, subscriptionEndDate: Long) {
+fun AttendanceCalendar(
+    currentMonth: Calendar,
+    onMonthChange: (Calendar) -> Unit,
+    attendance: List<Attendance>,
+    subscriptionRanges: List<Pair<Long, Long>>
+) {
     val monthFormatter = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -468,14 +507,20 @@ fun AttendanceCalendar(currentMonth: Calendar, onMonthChange: (Calendar) -> Unit
                 if (day.isNotEmpty()) {
                     val dayNumber = day.toInt()
                     val date = (currentMonth.clone() as Calendar).apply { set(Calendar.DAY_OF_MONTH, dayNumber) }
-                    val attendanceForDay = if (date.timeInMillis >= subscriptionStartDate && date.timeInMillis <= subscriptionEndDate) attendance.find { attendanceDate ->
+                    
+                    // Check if date is within ANY active subscription range
+                    val isActive = subscriptionRanges.any { (start, end) ->
+                        date.timeInMillis in start..end
+                    }
+
+                    val attendanceForDay = if (isActive) attendance.find { attendanceDate ->
                         val cal = Calendar.getInstance().apply { timeInMillis = attendanceDate.date }
                         cal.get(Calendar.YEAR) == date.get(Calendar.YEAR) &&
                                 cal.get(Calendar.MONTH) == date.get(Calendar.MONTH) &&
                                 cal.get(Calendar.DAY_OF_MONTH) == date.get(Calendar.DAY_OF_MONTH)
                     } else null
 
-                    val isExpired = date.timeInMillis > subscriptionEndDate || date.timeInMillis < subscriptionStartDate
+                    val isExpired = !isActive
 
                     Box(
                         modifier = Modifier

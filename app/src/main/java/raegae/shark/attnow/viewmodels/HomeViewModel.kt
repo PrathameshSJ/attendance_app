@@ -6,22 +6,14 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.SharingStarted
 import raegae.shark.attnow.data.AppDatabase
 import raegae.shark.attnow.data.Attendance
 import raegae.shark.attnow.data.SettingsDataStore
-import raegae.shark.attnow.data.Student
-import raegae.shark.attnow.ui.home.*
+import raegae.shark.attnow.data.logic.LogicalStudentMerger
+import raegae.shark.attnow.data.model.LogicalStudent
+import raegae.shark.attnow.data.util.StudentKey
 import java.util.Calendar
 import java.util.Locale
-
-
-private val todayMillis = Calendar.getInstance().apply {
-        set(Calendar.HOUR_OF_DAY, 0)
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-    }.timeInMillis
 
 class HomeViewModel(
     private val app: Application,
@@ -29,71 +21,111 @@ class HomeViewModel(
 ) : ViewModel() {
 
     private val settings = SettingsDataStore(app)
+
     private val searchQuery = MutableStateFlow("")
 
-    fun updateSearch(q: String) {
-        searchQuery.value = q
+    fun updateSearch(query: String) {
+        searchQuery.value = query
     }
 
-    val allStudents: StateFlow<List<Student>> =
-        database.studentDao().getAllStudents()
+    /* ---------- Students ---------- */
+
+    private val rawStudents: StateFlow<List<LogicalStudent>> =
+        database.studentDao()
+            .getAllStudents()
+            .map { LogicalStudentMerger.merge(it) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val pinnedIds: StateFlow<Set<Int>> =
+    private val pinnedKeys: StateFlow<Set<StudentKey>> =
         settings.pinnedStudents
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
-    val students: StateFlow<List<Student>> =
-        combine(allStudents, pinnedIds, searchQuery) { students, pinned, query ->
+    val students: StateFlow<List<LogicalStudent>> =
+        combine(rawStudents, pinnedKeys, searchQuery) { students, pinned, query ->
 
-            val today = Calendar.getInstance()
-                .getDisplayName(Calendar.DAY_OF_WEEK, Calendar.SHORT, Locale.getDefault())
-                ?: "Mon"
+            val today =
+                Calendar.getInstance()
+                    .getDisplayName(Calendar.DAY_OF_WEEK, Calendar.SHORT, Locale.getDefault())
+                    ?: "Mon"
 
             students
-                .filter { s ->
-                    pinned.contains(s.id) ||
-                    s.daysOfWeek.any { it.equals(today, true) }
+                .filter { student ->
+                    pinned.contains(student.key) ||
+                            student.daysOfWeek.any { it.equals(today, true) }
                 }
-                .filter { s ->
+                .filter { student ->
                     query.isBlank() ||
-                    s.name.contains(query, true) ||
-                    s.subject.contains(query, true)
+                            student.name.contains(query, true) ||
+                            student.subject.contains(query, true)
                 }
                 .sortedWith(
-                    compareByDescending<Student> { pinned.contains(it.id) }
+                    compareByDescending<LogicalStudent> { pinned.contains(it.key) }
                         .thenBy { it.name }
                 )
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    fun pinStudent(id: Int) = viewModelScope.launch {
-        settings.addPinned(id)
-    }
+    val availableForPinning: StateFlow<List<LogicalStudent>> =
+        combine(rawStudents, pinnedKeys, searchQuery) { students, pinned, query ->
 
-    fun unpinStudent(id: Int) = viewModelScope.launch {
-        settings.removePinned(id)
-    }
+            val today =
+                Calendar.getInstance()
+                    .getDisplayName(Calendar.DAY_OF_WEEK, Calendar.SHORT, Locale.getDefault())
+                    ?: "Mon"
 
-    val allAttendance = database.attendanceDao().getAllAttendance()
+            students
+                .filter { student ->
+                    // Exclude if Pinned OR Batch is Today (i.e. exclude if already on home)
+                    val isOnHome = pinned.contains(student.key) ||
+                            student.daysOfWeek.any { it.equals(today, true) }
+                    !isOnHome
+                }
+                .filter { student ->
+                    query.isBlank() ||
+                            student.name.contains(query, true) ||
+                            student.subject.contains(query, true)
+                }
+                .sortedBy { it.name }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    fun markAttendance(studentId: Int, date: Long, isPresent: Boolean) =
+    /* ---------- Pinning ---------- */
+
+    fun pinStudent(student: LogicalStudent) =
         viewModelScope.launch {
-
-            // 🔥 CRITICAL FIX:
-            // Delete any existing attendance for that day first
-            database.attendanceDao().deleteAttendance(studentId, date)
-
-
-
-            database.attendanceDao().upsert(
-                Attendance(
-                    studentId = studentId,
-                    date = date,
-                    isPresent = isPresent
-                )
-            )
+            settings.addPinned(student.key)
         }
+
+    fun pinStudentByKey(key: StudentKey) =
+        viewModelScope.launch {
+            settings.addPinned(key)
+        }
+
+    fun unpinStudent(student: LogicalStudent) =
+        viewModelScope.launch {
+            settings.removePinned(student.key)
+        }
+
+    /* ---------- Attendance ---------- */
+
+    val allAttendance =
+        database.attendanceDao().getAllAttendance()
+
+    fun markAttendance(
+        studentId: Int,
+        date: Long,
+        isPresent: Boolean
+    ) = viewModelScope.launch {
+
+        // enforce single record per day
+        database.attendanceDao().deleteAttendance(studentId, date)
+
+        database.attendanceDao().upsert(
+            Attendance(
+                studentId = studentId,
+                date = date,
+                isPresent = isPresent
+            )
+        )
+    }
 
     fun unmarkAttendance(studentId: Int, date: Long) =
         viewModelScope.launch {
@@ -101,146 +133,17 @@ class HomeViewModel(
         }
 }
 
-
-
-/* 
-class HomeViewModel(private val app: Application,private val database: AppDatabase) : ViewModel() {
-
-    val allAttendance = database.attendanceDao().getAllAttendance()
-    val allStudents = database.studentDao().getAllStudents()
-
-
-
-    private val settings = SettingsDataStore(app)
-
-    private val searchQuery = MutableStateFlow("")
-
-    fun updateSearch(q: String) {
-        searchQuery.value = q
-    }
-
-    val students = combine(
-    database.studentDao().getAllStudents(),
-    settings.pinnedStudentsForToday(),
-    searchQuery
-) { students, pinnedIds, query ->
-
-    val today = Calendar.getInstance().getDisplayName(
-        Calendar.DAY_OF_WEEK,
-        Calendar.SHORT,
-        Locale.getDefault()
-    ) ?: "Mon"
-
-    students
-        .map { s ->
-            StudentWithPin(
-                student = s,
-                isPinned = pinnedIds.contains(s.id)
-            )
-        }
-        .filter { row ->
-            row.isPinned || row.student.daysOfWeek.any { d -> d.equals(today, true) }
-        }
-        .filter { row ->
-            row.student.name.contains(query, true) ||
-            row.student.subject.contains(query, true)
-        }
-        .sortedWith(
-            compareByDescending<StudentWithPin> { it.isPinned }
-                .thenBy { it.student.name }
-        )
-}
-
-
-        
-        if (query.isBlank()) {
-        students
-            .map { student ->
-                student.isPinned = pinnedIds.contains(student.id)
-                student
-            }
-            .filter {
-                it.isPinned || it.daysOfWeek.any { d -> d.equals(today, true) }
-            }
-            .filter {
-                it.name.contains(query, true) ||
-                it.subject.contains(query, true)
-            }
-            .sortedWith(
-                compareByDescending<Student> { it.isPinned }
-                    .thenBy { it.name }
-            )
-        } else {
-            students.filter {
-                it.name.contains(query, true) ||
-                it.subject.contains(query, true)
-            }
-        }
-
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-
-    val allAttendance = database.attendanceDao().getAllAttendance()
-
-    // ---------- Pinned (manual) students for Home ---------- 
-    
-    private val settings = SettingsDataStore(app)
-
-    val studentsWithPin = combine(
-        database.studentDao().getAllStudents(),
-        settings.pinnedStudents
-    ) { students, pinnedIds ->
-        students.map { student ->
-            student.isPinned = pinnedIds.contains(student.id)
-            student
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-
-    fun pinStudent(studentId: Int) {
-        viewModelScope.launch {
-            settings.addPinned(studentId)
-        }
-    }
-
-    fun unpinStudent(studentId: Int) {
-        viewModelScope.launch {
-            settings.removePinned(studentId)
-        }
-    }
-
-
-    fun markAttendance(studentId: Int, date: Long, isPresent: Boolean) {
-        viewModelScope.launch {
-            database.attendanceDao().upsert(
-                Attendance(
-                    studentId = studentId,
-                    date = date,
-                    isPresent = isPresent
-                )
-            )
-        }
-    }
-
-    fun unmarkAttendance(studentId: Int, date: Long) {
-        viewModelScope.launch {
-            database.attendanceDao().deleteAttendance(studentId, date)
-        }
-    }
-}
-*/
-
-
-
 /* ---------- Factory ---------- */
-class HomeViewModelFactory(private val application: Application) :
-    ViewModelProvider.Factory {
+
+class HomeViewModelFactory(
+    private val application: Application
+) : ViewModelProvider.Factory {
 
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(HomeViewModel::class.java)) {
             val db = AppDatabase.getDatabase(application)
             @Suppress("UNCHECKED_CAST")
-            return HomeViewModel(application,db) as T
+            return HomeViewModel(application, db) as T
         }
         throw IllegalArgumentException("Unknown ViewModel")
     }

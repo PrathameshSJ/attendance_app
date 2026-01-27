@@ -13,7 +13,7 @@ android {
 
     defaultConfig {
         applicationId = "raegae.shark.attnow"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -56,6 +56,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
+    implementation("androidx.compose.material:material-icons-extended")
     implementation("org.dhatim:fastexcel:0.19.0")
     implementation("org.dhatim:fastexcel-reader:0.19.0")
     implementation("androidx.compose.runtime:runtime-livedata:1.6.0")

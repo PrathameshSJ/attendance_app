@@ -11,7 +11,13 @@ interface AttendanceDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(attendance: Attendance)
 
-    @Query("SELECT * FROM attendance WHERE studentId = :studentId")
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(list: List<Attendance>)
+
+    @Query("SELECT * FROM attendance WHERE studentId IN (:studentIds) ORDER BY date ASC")
+    fun getAttendanceForStudents(studentIds: List<Int>): Flow<List<Attendance>>
+
+    @Query("SELECT * FROM attendance WHERE studentId = :studentId ORDER BY date ASC")
     fun getAttendanceForStudent(studentId: Int): Flow<List<Attendance>>
 
     @Query("SELECT * FROM attendance")
@@ -23,4 +29,26 @@ interface AttendanceDao {
 
     @Query("DELETE FROM attendance WHERE studentId = :studentId AND date = :date")
     suspend fun deleteAttendance(studentId: Int, date: Long)
+
+    @Query(
+        """
+        DELETE FROM attendance
+        WHERE studentId = :studentId
+        """
+    )
+    suspend fun deleteAllForStudent(studentId: Int)
+
+    @Query(
+        """
+        DELETE FROM attendance
+        WHERE studentId IN (
+            SELECT id FROM student
+            WHERE name = :name AND subject = :subject
+        )
+        """
+    )
+    suspend fun deleteForLogicalStudent(
+        name: String,
+        subject: String
+    )
 }

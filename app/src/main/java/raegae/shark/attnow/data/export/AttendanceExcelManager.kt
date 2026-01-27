@@ -18,9 +18,6 @@ class AttendanceExcelManager(
     private val database: AppDatabase
 ) {
 
-    
-    private val importer = AttendanceExcelImporter(context)
-
     /* ---------- EXPORT ---------- */
     suspend fun exportAll(uri: Uri,student: Flow<List<Student>>,attendance: Flow<List<Attendance>> ) = withContext(Dispatchers.IO) {
         AttendanceExcelExporter(
@@ -29,7 +26,7 @@ class AttendanceExcelManager(
         ).export(uri)
     }
 
-    fun import(uri: Uri): List<Attendance> {
-        return importer.read(uri)
+    suspend fun import(uri: Uri): List<Attendance>{
+        return AttendanceExcelImporter(context).read(uri)
     }
 }
