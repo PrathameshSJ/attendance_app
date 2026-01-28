@@ -39,6 +39,7 @@ import raegae.shark.attnow.data.export.AttendanceExcelManager
 import raegae.shark.attnow.data.util.StudentKey
 import raegae.shark.attnow.ui.add.AddStudentScreen
 import raegae.shark.attnow.ui.animation.scaledOffsetTween
+import raegae.shark.attnow.ui.edit.EditStudentScreen
 import raegae.shark.attnow.ui.home.AddExistingStudentScreen
 import raegae.shark.attnow.ui.home.HomeScreen
 import raegae.shark.attnow.ui.profile.StudentProfileScreen
@@ -268,6 +269,69 @@ fun FirstApp() {
                     val subject = it.arguments?.getString("subject") ?: ""
 
                     StudentProfileScreen(navController, StudentKey(name, subject))
+                }
+
+                composable(
+                        "edit_student/{name}/{subject}",
+                        arguments =
+                                listOf(
+                                        navArgument("name") { type = NavType.StringType },
+                                        navArgument("subject") { type = NavType.StringType }
+                                )
+                ) {
+                    val name = it.arguments?.getString("name") ?: ""
+                    val subject = it.arguments?.getString("subject") ?: ""
+
+                    EditStudentScreen(navController, StudentKey(name, subject))
+                }
+
+                composable(
+                        "edit_entities/{name}/{subject}",
+                        arguments =
+                                listOf(
+                                        navArgument("name") { type = NavType.StringType },
+                                        navArgument("subject") { type = NavType.StringType }
+                                )
+                ) { entry ->
+                    val name = entry.arguments?.getString("name") ?: ""
+                    val subject = entry.arguments?.getString("subject") ?: ""
+
+                    val context = LocalContext.current
+                    val viewModel: raegae.shark.attnow.viewmodels.EditEntitiesViewModel =
+                            androidx.lifecycle.viewmodel.compose.viewModel(
+                                    factory =
+                                            raegae.shark.attnow.viewmodels
+                                                    .EditEntitiesViewModelFactory(
+                                                            context,
+                                                            StudentKey(name, subject)
+                                                    )
+                            )
+
+                    // Observe Result from Detail Screen
+                    val savedStateHandle = entry.savedStateHandle
+                    val updatedStudent =
+                            savedStateHandle.get<raegae.shark.attnow.data.Student>(
+                                    "updated_student"
+                            )
+
+                    LaunchedEffect(updatedStudent) {
+                        updatedStudent?.let {
+                            viewModel.updateEntity(it)
+                            savedStateHandle.remove<raegae.shark.attnow.data.Student>(
+                                    "updated_student"
+                            )
+                        }
+                    }
+
+                    raegae.shark.attnow.ui.edit.EditEntitiesListScreen(navController, viewModel)
+                }
+
+                composable(
+                        "edit_entity_detail/{id}",
+                        arguments = listOf(navArgument("id") { type = NavType.IntType })
+                ) { entry ->
+                    val id = entry.arguments?.getInt("id") ?: 0
+                    raegae.shark.attnow.ui.edit.EditEntityDetailScreen(navController, id)
                 }
             }
         }
