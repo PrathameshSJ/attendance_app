@@ -93,6 +93,7 @@ fun EditStudentScreen(navController: NavController, studentKey: StudentKey) {
                 PaintButton(Color(0xFFF44336), "Absent", selectedPaint == 1) { selectedPaint = 1 }
                 PaintButton(Color(0xFFB0B0B0), "No Sub", selectedPaint == 2) { selectedPaint = 2 }
                 PaintButton(Color(0xFF2196F3), "Sub", selectedPaint == 3) { selectedPaint = 3 }
+                PaintButton(Color.Black, "None", selectedPaint == null) { selectedPaint = null }
             }
 
             Divider()

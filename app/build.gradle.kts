@@ -19,6 +19,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        multiDexEnabled = true
     }
 
     buildTypes {
@@ -65,6 +66,20 @@ dependencies {
     implementation("androidx.compose.animation:animation-core:1.11.0-alpha02") // Use the latest version
     implementation("androidx.datastore:datastore-preferences:1.2.0")
     implementation("androidx.compose.ui:ui:1.10.0")
+    implementation(libs.play.services.auth)
+    implementation(libs.google.api.client.android) {
+        exclude(group = "com.google.guava")
+        exclude(group = "org.apache.httpcomponents")
+    }
+    implementation(libs.google.api.services.drive) {
+        exclude(group = "com.google.guava")
+        exclude(group = "org.apache.httpcomponents")
+    }
+    implementation("com.google.guava:guava:31.1-android")
+    implementation("com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava")
+    // implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+    implementation("androidx.compose.material:material-icons-extended:1.7.5") // Ensure compatible version 
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

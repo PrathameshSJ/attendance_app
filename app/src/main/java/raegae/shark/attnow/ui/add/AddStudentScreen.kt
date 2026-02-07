@@ -102,6 +102,13 @@ fun AddStudentScreen(
                                         }
 
                                         val cal = Calendar.getInstance()
+                                        // Normalize to Midnight (Start of Day) to prevent
+                                        // timezone/offset issues
+                                        cal.set(Calendar.HOUR_OF_DAY, 0)
+                                        cal.set(Calendar.MINUTE, 0)
+                                        cal.set(Calendar.SECOND, 0)
+                                        cal.set(Calendar.MILLISECOND, 0)
+
                                         val start = cal.timeInMillis
                                         cal.add(Calendar.MONTH, months.toInt())
                                         cal.add(Calendar.DAY_OF_MONTH, days.toInt())

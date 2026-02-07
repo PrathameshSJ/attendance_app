@@ -1,30 +1,51 @@
 package raegae.shark.attnow.ui.settings
 
+import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import java.net.HttpURLConnection
+import java.net.URL
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import raegae.shark.attnow.data.SettingsDataStore
-import raegae.shark.attnow.getApplication
+import raegae.shark.attnow.viewmodels.DriveViewModel
 import raegae.shark.attnow.viewmodels.SettingsViewModel
 
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(navController: androidx.navigation.NavController) {
     val context = LocalContext.current
     val settings = remember { SettingsDataStore(context.applicationContext) }
     val scope = rememberCoroutineScope()
     val speed by settings.animationSpeed.collectAsState(initial = 1f)
-    val viewModel: SettingsViewModel = SettingsViewModel(getApplication())
+    val viewModel: SettingsViewModel = viewModel()
+
+    val driveViewModel: DriveViewModel = viewModel()
+    val driveBusy by driveViewModel.isBusy.collectAsState()
+    val driveStatus by driveViewModel.statusMessage.collectAsState()
+    val signedInAccount by driveViewModel.authManager.signedInAccount.collectAsState()
+
+    val signInLauncher =
+            rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+                    result ->
+                driveViewModel.handleSignInResult(result.data)
+            }
 
     val isBusy by viewModel.isBusy.collectAsState()
     val error by viewModel.error.collectAsState()
@@ -110,6 +131,132 @@ fun SettingsScreen() {
             valueRange = 0.25f..2.0f,
             steps = 6
         )*/
+
+        /* ================= GOOGLE DRIVE ================= */
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                        text = "Google Drive (Cloud Backup)",
+                        style = MaterialTheme.typography.titleMedium
+                )
+
+                if (signedInAccount == null) {
+                    Button(
+                            onClick = {
+                                signInLauncher.launch(driveViewModel.authManager.getSignInIntent())
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                    ) { Text("Log In with Google") }
+                } else {
+                    Row(
+                            modifier =
+                                    Modifier.fillMaxWidth()
+                                            .clickable { navController.navigate("account") }
+                                            .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val photoUrl = signedInAccount?.photoUrl
+                        if (photoUrl != null) {
+                            var bitmap by remember {
+                                mutableStateOf<android.graphics.Bitmap?>(null)
+                            }
+                            LaunchedEffect(photoUrl) {
+                                withContext(Dispatchers.IO) {
+                                    try {
+                                        val url = URL(photoUrl.toString())
+                                        val connection = url.openConnection() as HttpURLConnection
+                                        connection.doInput = true
+                                        connection.connect()
+                                        val input = connection.inputStream
+                                        bitmap = BitmapFactory.decodeStream(input)
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    }
+                                }
+                            }
+
+                            if (bitmap != null) {
+                                Image(
+                                        bitmap = bitmap!!.asImageBitmap(),
+                                        contentDescription = "Profile Picture",
+                                        modifier = Modifier.size(40.dp).padding(end = 12.dp)
+                                )
+                            } else {
+                                Icon(
+                                        imageVector = Icons.Filled.Person,
+                                        contentDescription = "Profile",
+                                        modifier = Modifier.size(40.dp).padding(end = 12.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        } else {
+                            Icon(
+                                    imageVector = Icons.Filled.Person,
+                                    contentDescription = "Profile",
+                                    modifier = Modifier.size(40.dp).padding(end = 12.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                    "Signed in as",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.secondary
+                            )
+                            Text(
+                                    signedInAccount?.email ?: "",
+                                    style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+
+                    Button(
+                            onClick = {
+                                scope.launch {
+                                    val file = viewModel.exportToTempFile()
+                                    if (file != null) {
+                                        driveViewModel.performBackup(file)
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !driveBusy && !isBusy
+                    ) {
+                        if (driveBusy && driveStatus?.contains("Upload") == true) {
+                            CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Backing up...")
+                        } else {
+                            Text("Backup to Drive")
+                        }
+                    }
+
+                    if (driveStatus != null && !driveBusy) {
+                        Text(
+                                text = driveStatus!!,
+                                style = MaterialTheme.typography.labelSmall,
+                                color =
+                                        if (driveStatus!!.contains("Failed"))
+                                                MaterialTheme.colorScheme.error
+                                        else MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    OutlinedButton(
+                            onClick = { navController.navigate("account") },
+                            modifier = Modifier.fillMaxWidth()
+                    ) { Text("Restore from Drive") }
+                }
+            }
+        }
 
         /* ================= DATA ================= */
         Card(modifier = Modifier.fillMaxWidth()) {

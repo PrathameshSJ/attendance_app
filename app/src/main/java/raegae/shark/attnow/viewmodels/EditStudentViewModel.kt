@@ -90,24 +90,38 @@ class EditStudentViewModel(private val database: AppDatabase, private val studen
         val changes = pendingChanges.value
         if (changes.isEmpty()) return
 
+        // Helper to normalize any timestamp to midnight
+        fun getNormalized(millis: Long): Long {
+            val c = Calendar.getInstance()
+            c.timeInMillis = millis
+            normalize(c)
+            return c.timeInMillis
+        }
+
+        // Normalize existing student range dates to midnight to ensure consistent comparison
+        // This fixes the bug where "13:00 Start" > "00:00 Check" -> False
+        val normalizedStudents =
+                students.map {
+                    it.copy(
+                            subscriptionStartDate = getNormalized(it.subscriptionStartDate),
+                            subscriptionEndDate = getNormalized(it.subscriptionEndDate)
+                    )
+                }
+
         // Step A: Determine desired Subscription Status for every relevant day
         // -------------------------------------------------------------------
-        // Relevant Range: From Min(Existing Start, Changed Date) to Max(Existing End, Changed Date)
-
+        // Relevant Range: From Min to Max
         val allDates =
-                students.flatMap { listOf(it.subscriptionStartDate, it.subscriptionEndDate) } +
-                        changes.keys
+                normalizedStudents.flatMap {
+                    listOf(it.subscriptionStartDate, it.subscriptionEndDate)
+                } + changes.keys
         if (allDates.isEmpty()) return
 
         val minDate = allDates.minOrNull()!!
         val maxDate = allDates.maxOrNull()!!
 
         // Build a daily map of "Should Be Subscribed"
-        // Default to existing coverage
         val subscriptionMap = mutableMapOf<Long, Boolean>()
-
-        // Iterate day by day from min to max?
-        // Or better: Iterate existing ranges and mark true. Then apply changes.
 
         val cal = Calendar.getInstance()
         cal.timeInMillis = minDate
@@ -122,7 +136,7 @@ class EditStudentViewModel(private val database: AppDatabase, private val studen
         var curr = startLoop
         while (curr <= endLoop) {
             val isCovered =
-                    students.any {
+                    normalizedStudents.any {
                         curr >= it.subscriptionStartDate && curr <= it.subscriptionEndDate
                     }
             subscriptionMap[curr] = isCovered

@@ -69,6 +69,35 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    suspend fun exportToTempFile(): java.io.File? =
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    _isBusy.value = true
+                    val file = java.io.File(context.cacheDir, "backup_temp.xlsx")
+                    if (file.exists()) file.delete()
+
+                    val students = database.studentDao().getAllStudents()
+                    val attendance = database.attendanceDao().getAllAttendance()
+
+                    excelManager.exportAll(
+                            Uri.fromFile(file),
+                            student = students,
+                            attendance = attendance
+                    )
+
+                    if (!file.exists()) {
+                        _error.value = "No data to backup"
+                        return@withContext null
+                    }
+                    file
+                } catch (e: Exception) {
+                    _error.value = "Export failed: ${e.message}"
+                    null
+                } finally {
+                    _isBusy.value = false
+                }
+            }
+
     /* ---------- IMPORT ---------- */
 
     /**

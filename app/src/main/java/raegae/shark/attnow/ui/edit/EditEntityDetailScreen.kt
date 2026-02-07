@@ -113,6 +113,28 @@ fun EditEntityDetailScreen(navController: NavController, studentId: Int) {
 
     val dateFormatter = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
 
+    fun localToUtc(localMillis: Long): Long {
+        val calendar = Calendar.getInstance()
+        calendar.timeInMillis = localMillis
+        val utc = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+        utc.clear()
+        utc.set(
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DAY_OF_MONTH)
+        )
+        return utc.timeInMillis
+    }
+
+    fun utcToLocal(utcMillis: Long): Long {
+        val utc = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+        utc.timeInMillis = utcMillis
+        val local = Calendar.getInstance()
+        local.clear()
+        local.set(utc.get(Calendar.YEAR), utc.get(Calendar.MONTH), utc.get(Calendar.DAY_OF_MONTH))
+        return local.timeInMillis
+    }
+
     Scaffold(
             topBar = {
                 TopAppBar(
@@ -221,13 +243,16 @@ fun EditEntityDetailScreen(navController: NavController, studentId: Int) {
 
     // Material3 Date Picker
     if (showDatePickerStart) {
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = startMillis)
+        val datePickerState =
+                rememberDatePickerState(initialSelectedDateMillis = localToUtc(startMillis))
         DatePickerDialog(
                 onDismissRequest = { showDatePickerStart = false },
                 confirmButton = {
                     TextButton(
                             onClick = {
-                                datePickerState.selectedDateMillis?.let { startMillis = it }
+                                datePickerState.selectedDateMillis?.let {
+                                    startMillis = utcToLocal(it)
+                                }
                                 showDatePickerStart = false
                             }
                     ) { Text("OK") }
@@ -239,13 +264,16 @@ fun EditEntityDetailScreen(navController: NavController, studentId: Int) {
     }
 
     if (showDatePickerEnd) {
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = endMillis)
+        val datePickerState =
+                rememberDatePickerState(initialSelectedDateMillis = localToUtc(endMillis))
         DatePickerDialog(
                 onDismissRequest = { showDatePickerEnd = false },
                 confirmButton = {
                     TextButton(
                             onClick = {
-                                datePickerState.selectedDateMillis?.let { endMillis = it }
+                                datePickerState.selectedDateMillis?.let {
+                                    endMillis = utcToLocal(it)
+                                }
                                 showDatePickerEnd = false
                             }
                     ) { Text("OK") }
