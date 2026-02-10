@@ -2,6 +2,7 @@ package raegae.shark.attnow.ui.edit
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -10,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import java.text.SimpleDateFormat
@@ -46,6 +48,9 @@ fun EditEntityDetailScreen(navController: NavController, studentId: Int) {
     // State
     var startMillis by remember(student) { mutableStateOf(student.subscriptionStartDate) }
     var endMillis by remember(student) { mutableStateOf(student.subscriptionEndDate) }
+    var maxDays by remember(student) { mutableStateOf(student.max_days.toString()) }
+    var phoneNumber by remember(student) { mutableStateOf(student.phoneNumber) }
+    var expandedMaxDays by remember { mutableStateOf(false) }
 
     // Batch Logic Copied/Adapted
     val weekDays = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
@@ -96,43 +101,54 @@ fun EditEntityDetailScreen(navController: NavController, studentId: Int) {
     var pickerHour by remember { mutableStateOf(9) }
     var pickerMinute by remember { mutableStateOf(0) }
 
+    val dateFormatter = remember { SimpleDateFormat("EEE, MMM dd, yyyy", Locale.getDefault()) }
+
+    fun formatTime(h: Int, m: Int): String {
+        val cal =
+                Calendar.getInstance().apply {
+                    set(Calendar.HOUR_OF_DAY, h)
+                    set(Calendar.MINUTE, m)
+                }
+        return SimpleDateFormat("h:mm a", Locale.getDefault()).format(cal.time)
+    }
+
     fun openTimePicker(index: Int, isStart: Boolean) {
         editingIndex = index
         editingStart = isStart
-        val (h, m) = if (isStart) startTimes[index].value else endTimes[index].value
-        pickerHour = h
-        pickerMinute = m
+        val current = if (isStart) startTimes[index].value else endTimes[index].value
+        pickerHour = current.first
+        pickerMinute = current.second
         showTimePicker = true
     }
 
-    fun formatTime(h: Int, m: Int): String {
-        val am = h < 12
-        val hr = if (h == 0) 12 else if (h > 12) h - 12 else h
-        return "%d:%02d %s".format(hr, m, if (am) "AM" else "PM")
-    }
-
-    val dateFormatter = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-
+    // Handlers for Date Picker UTC conversion
     fun localToUtc(localMillis: Long): Long {
         val calendar = Calendar.getInstance()
         calendar.timeInMillis = localMillis
-        val utc = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
-        utc.clear()
-        utc.set(
+        val utcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+        utcCalendar.set(
                 calendar.get(Calendar.YEAR),
                 calendar.get(Calendar.MONTH),
                 calendar.get(Calendar.DAY_OF_MONTH)
         )
-        return utc.timeInMillis
+        return utcCalendar.timeInMillis
     }
 
     fun utcToLocal(utcMillis: Long): Long {
-        val utc = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
-        utc.timeInMillis = utcMillis
-        val local = Calendar.getInstance()
-        local.clear()
-        local.set(utc.get(Calendar.YEAR), utc.get(Calendar.MONTH), utc.get(Calendar.DAY_OF_MONTH))
-        return local.timeInMillis
+        val utcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+        utcCalendar.timeInMillis = utcMillis
+        val calendar = Calendar.getInstance()
+        calendar.set(
+                utcCalendar.get(Calendar.YEAR),
+                utcCalendar.get(Calendar.MONTH),
+                utcCalendar.get(Calendar.DAY_OF_MONTH),
+                0,
+                0,
+                0 // Reset time part for consistency
+        )
+        // Reset millis to 0 just in case
+        calendar.set(Calendar.MILLISECOND, 0)
+        return calendar.timeInMillis
     }
 
     Scaffold(
@@ -162,7 +178,9 @@ fun EditEntityDetailScreen(navController: NavController, studentId: Int) {
                                                         subscriptionStartDate = startMillis,
                                                         subscriptionEndDate = endMillis,
                                                         daysOfWeek = selectedDays,
-                                                        batchTimes = newBatchTimes
+                                                        batchTimes = newBatchTimes,
+                                                        max_days = maxDays.toIntOrNull() ?: 0,
+                                                        phoneNumber = phoneNumber
                                                 )
 
                                         // Pass back to List Screen
@@ -184,6 +202,20 @@ fun EditEntityDetailScreen(navController: NavController, studentId: Int) {
                         .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Phone Number
+            var phoneNumberError by remember { mutableStateOf(false) }
+            OutlinedTextField(
+                    value = phoneNumber,
+                    onValueChange = {
+                        if (it.length <= 10 && it.all { char -> char.isDigit() }) {
+                            phoneNumber = it
+                        }
+                    },
+                    label = { Text("Phone Number (10 digits)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+            )
+
             // Subscription Dates
             Text("Subscription Period", style = MaterialTheme.typography.titleMedium)
 
@@ -209,7 +241,44 @@ fun EditEntityDetailScreen(navController: NavController, studentId: Int) {
                 }
             }
 
-            Divider()
+            // Max Days
+            Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                ExposedDropdownMenuBox(
+                        expanded = expandedMaxDays,
+                        onExpandedChange = { expandedMaxDays = !expandedMaxDays }
+                ) {
+                    OutlinedTextField(
+                            value = maxDays,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Max Days (0 = Unlimited)") },
+                            modifier =
+                                    Modifier.fillMaxWidth()
+                                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                    )
+
+                    ExposedDropdownMenu(
+                            expanded = expandedMaxDays,
+                            onDismissRequest = { expandedMaxDays = false }
+                    ) {
+                        (0..50).forEach {
+                            DropdownMenuItem(
+                                    text = { Text(it.toString()) },
+                                    onClick = {
+                                        maxDays = it.toString()
+                                        expandedMaxDays = false
+                                    }
+                            )
+                        }
+                    }
+                }
+            }
+
+            HorizontalDivider()
 
             // Batch Times
             Text("Batch Days & Times", style = MaterialTheme.typography.titleMedium)

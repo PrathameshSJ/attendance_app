@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -226,7 +227,8 @@ val TabIndex =
         mapOf(
                 AppDestinations.HOME.route to 0,
                 AppDestinations.PROFILES.route to 1,
-                AppDestinations.SETTINGS.route to 2
+                AppDestinations.NOTIFICATIONS.route to 2,
+                AppDestinations.SETTINGS.route to 3
         )
 
 /* ---------- App Scaffold ---------- */
@@ -382,6 +384,35 @@ fun FirstApp() {
 
                                 composable(AppDestinations.PROFILES.route) {
                                         ProfilesScreen(navController)
+                                }
+
+                                composable(AppDestinations.NOTIFICATIONS.route) {
+                                        raegae.shark.attnow.ui.notifications.NotificationsScreen(
+                                                navController
+                                        )
+                                }
+
+                                composable(
+                                        "notification_detail/{id}",
+                                        arguments =
+                                                listOf(
+                                                        navArgument("id") {
+                                                                type = NavType.StringType
+                                                        }
+                                                )
+                                ) { entry ->
+                                        val id = entry.arguments?.getString("id") ?: ""
+
+                                        val viewModel:
+                                                raegae.shark.attnow.viewmodels.NotificationsViewModel =
+                                                androidx.lifecycle.viewmodel.compose.viewModel()
+
+                                        raegae.shark.attnow.ui.notifications
+                                                .NotificationDetailScreen(
+                                                        navController,
+                                                        id,
+                                                        viewModel
+                                                )
                                 }
 
                                 composable(AppDestinations.SETTINGS.route) {
@@ -559,6 +590,7 @@ fun FirstApp() {
 enum class AppDestinations(val route: String, val label: String, val icon: ImageVector) {
         HOME("home", "Home", Icons.Filled.Home),
         PROFILES("profiles", "Students", Icons.Filled.Person),
+        NOTIFICATIONS("notifications", "Alerts", Icons.Filled.Notifications),
         SETTINGS("settings", "Settings", Icons.Filled.Settings)
 }
 

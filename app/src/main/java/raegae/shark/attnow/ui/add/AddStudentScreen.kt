@@ -2,6 +2,7 @@ package raegae.shark.attnow.ui.add
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -9,27 +10,29 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import java.util.Calendar
 import kotlinx.coroutines.launch
-import raegae.shark.attnow.getApplication
 import raegae.shark.attnow.viewmodels.AddStudentViewModel
 import raegae.shark.attnow.viewmodels.AddStudentViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddStudentScreen(
-        navController: NavController,
-        addStudentViewModel: AddStudentViewModel =
-                viewModel(factory = AddStudentViewModelFactory(getApplication()))
-) {
+fun AddStudentScreen(navController: NavController) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    val application = context.applicationContext as android.app.Application
+    val addStudentViewModel: AddStudentViewModel =
+            viewModel(factory = AddStudentViewModelFactory(application))
     val scope = rememberCoroutineScope()
 
     var name by remember { mutableStateOf("") }
+    var phoneNumber by remember { mutableStateOf("") }
     var subject by remember { mutableStateOf("") }
+    var maxDays by remember { mutableStateOf("12") }
+    var expandedMaxDays by remember { mutableStateOf(false) }
 
     var nameError by remember { mutableStateOf(false) }
     var subjectError by remember { mutableStateOf(false) }
@@ -121,7 +124,9 @@ fun AddStudentScreen(
                                                             start,
                                                             cal.timeInMillis,
                                                             batchTimes,
-                                                            selectedDays
+                                                            selectedDays,
+                                                            maxDays.toIntOrNull() ?: 0,
+                                                            phoneNumber
                                                     )
                                             if (ok) navController.popBackStack()
                                             else error = "Student already exists"
@@ -151,15 +156,63 @@ fun AddStudentScreen(
             )
 
             OutlinedTextField(
-                    value = subject,
+                    value = phoneNumber,
                     onValueChange = {
-                        subject = it
-                        if (subjectError) subjectError = false
+                        if (it.length <= 10 && it.all { char -> char.isDigit() }) {
+                            phoneNumber = it
+                        }
                     },
-                    label = { Text("Subject") },
-                    isError = subjectError,
+                    label = { Text("Phone Number (10 digits)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
             )
+
+            Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                OutlinedTextField(
+                        value = subject,
+                        onValueChange = {
+                            subject = it
+                            if (subjectError) subjectError = false
+                        },
+                        label = { Text("Subject") },
+                        isError = subjectError,
+                        modifier = Modifier.weight(1f)
+                )
+
+                ExposedDropdownMenuBox(
+                        expanded = expandedMaxDays,
+                        onExpandedChange = { expandedMaxDays = !expandedMaxDays }
+                ) {
+                    OutlinedTextField(
+                            value = maxDays,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Max Days") },
+                            modifier =
+                                    Modifier.width(110.dp)
+                                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                    )
+
+                    ExposedDropdownMenu(
+                            expanded = expandedMaxDays,
+                            onDismissRequest = { expandedMaxDays = false }
+                    ) {
+                        (1..50).forEach {
+                            DropdownMenuItem(
+                                    text = { Text(it.toString()) },
+                                    onClick = {
+                                        maxDays = it.toString()
+                                        expandedMaxDays = false
+                                    }
+                            )
+                        }
+                    }
+                }
+            }
 
             Text("Batch Days", style = MaterialTheme.typography.titleMedium)
 

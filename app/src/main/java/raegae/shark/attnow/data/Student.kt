@@ -15,5 +15,7 @@ data class Student(
         val subscriptionStartDate: Long,
         val subscriptionEndDate: Long,
         val batchTimes: Map<String, String>,
-        val daysOfWeek: List<String>
+        val daysOfWeek: List<String>,
+        val max_days: Int = 0,
+        val phoneNumber: String = ""
 ) : Serializable

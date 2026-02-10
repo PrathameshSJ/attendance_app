@@ -24,16 +24,16 @@ import androidx.navigation.NavController
 import java.text.SimpleDateFormat
 import java.util.*
 import raegae.shark.attnow.data.util.StudentKey
-import raegae.shark.attnow.getApplication
 import raegae.shark.attnow.viewmodels.EditStudentViewModel
 import raegae.shark.attnow.viewmodels.EditStudentViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditStudentScreen(navController: NavController, studentKey: StudentKey) {
-    val context = getApplication()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val application = context.applicationContext as android.app.Application
     val viewModel: EditStudentViewModel =
-            viewModel(factory = EditStudentViewModelFactory(context, studentKey))
+            viewModel(factory = EditStudentViewModelFactory(application, studentKey))
 
     val changes by viewModel.pendingChanges.collectAsState()
     val hasChanges = changes.isNotEmpty()
