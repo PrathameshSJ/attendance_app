@@ -81,9 +81,21 @@ class AttendanceExcelImporter(private val context: Context, private val database
             // Header mapping
             val header = rows[0]
             val colToDay = mutableMapOf<Int, Int>()
-            for (c in 4 until header.cellCount) {
-                val day = header.getCell(c)?.asNumber()?.toInt() ?: continue
-                colToDay[c] = day
+            for (c in 0 until header.cellCount) {
+                val cell = header.getCell(c) ?: continue
+                // Safely check if it's a number (Day 1..31)
+                // New format: Cols 4(MaxClasses), 5(Phone) are Strings.
+                // Old format: Cols 4, 5 are Days.
+                try {
+                    if (cell.type == org.dhatim.fastexcel.reader.CellType.NUMBER) {
+                        val day = cell.asNumber().toInt()
+                        if (day in 1..31) {
+                            colToDay[c] = day
+                        }
+                    }
+                } catch (e: Exception) {
+                    // Ignore non-number headers
+                }
             }
             // sb.appendLine("  -> Found ${colToDay.size} day columns")
 
@@ -98,7 +110,7 @@ class AttendanceExcelImporter(private val context: Context, private val database
                     continue
                 }
 
-                val monthStr = row.getCell(3)?.asString() ?: continue
+                val monthStr = row.getCell(5)?.asString() ?: continue
                 val monthIndex = parseMonth(monthStr)
 
                 for ((col, day) in colToDay) {
@@ -205,6 +217,8 @@ class AttendanceExcelImporter(private val context: Context, private val database
             val end = parseDateToMillis(row.getCell(4)?.asString() ?: "")
             val daysStr = row.getCell(5)?.asString() ?: ""
             val timesStr = row.getCell(6)?.asString() ?: ""
+            val maxClassesStr = row.getCell(7)?.asString() ?: ""
+            val phoneNumber = row.getCell(8)?.asString() ?: ""
 
             // Check if exists
             val existing =
@@ -216,6 +230,11 @@ class AttendanceExcelImporter(private val context: Context, private val database
                     }
 
             if (existing != null) {
+                // Should we update existing phoneNumber/maxClasses if different?
+                // User said "clean code", but didn't specify strict overwrite.
+                // Importing implies "state restoration".
+                // If I restore, maybe I should ensure attributes match?
+                // For now, let's just map ID.
                 idMap[oldId] = existing.id
             } else {
                 // Create new
@@ -227,7 +246,9 @@ class AttendanceExcelImporter(private val context: Context, private val database
                                 subscriptionEndDate = end,
                                 daysOfWeek =
                                         if (daysStr.isBlank()) emptyList() else daysStr.split(","),
-                                batchTimes = parseBatchTimes(timesStr)
+                                batchTimes = parseBatchTimes(timesStr),
+                                max_classes = maxClassesStr.toIntOrNull() ?: 0,
+                                phoneNumber = phoneNumber
                         )
                 val newId = database.studentDao().insert(newEntity).toInt()
                 idMap[oldId] = newId

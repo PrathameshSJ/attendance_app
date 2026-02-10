@@ -31,8 +31,8 @@ fun AddStudentScreen(navController: NavController) {
     var name by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
     var subject by remember { mutableStateOf("") }
-    var maxDays by remember { mutableStateOf("12") }
-    var expandedMaxDays by remember { mutableStateOf(false) }
+    var maxClasses by remember { mutableStateOf("12") }
+    var expandedMaxClasses by remember { mutableStateOf(false) }
 
     var nameError by remember { mutableStateOf(false) }
     var subjectError by remember { mutableStateOf(false) }
@@ -125,7 +125,7 @@ fun AddStudentScreen(navController: NavController) {
                                                             cal.timeInMillis,
                                                             batchTimes,
                                                             selectedDays,
-                                                            maxDays.toIntOrNull() ?: 0,
+                                                            maxClasses.toIntOrNull() ?: 0,
                                                             phoneNumber
                                                     )
                                             if (ok) navController.popBackStack()
@@ -184,29 +184,29 @@ fun AddStudentScreen(navController: NavController) {
                 )
 
                 ExposedDropdownMenuBox(
-                        expanded = expandedMaxDays,
-                        onExpandedChange = { expandedMaxDays = !expandedMaxDays }
+                        expanded = expandedMaxClasses,
+                        onExpandedChange = { expandedMaxClasses = !expandedMaxClasses }
                 ) {
                     OutlinedTextField(
-                            value = maxDays,
+                            value = maxClasses,
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("Max Days") },
+                            label = { Text("Max Classes") },
                             modifier =
-                                    Modifier.width(110.dp)
+                                    Modifier.width(130.dp)
                                             .menuAnchor(MenuAnchorType.PrimaryNotEditable)
                     )
 
                     ExposedDropdownMenu(
-                            expanded = expandedMaxDays,
-                            onDismissRequest = { expandedMaxDays = false }
+                            expanded = expandedMaxClasses,
+                            onDismissRequest = { expandedMaxClasses = false }
                     ) {
                         (1..50).forEach {
                             DropdownMenuItem(
                                     text = { Text(it.toString()) },
                                     onClick = {
-                                        maxDays = it.toString()
-                                        expandedMaxDays = false
+                                        maxClasses = it.toString()
+                                        expandedMaxClasses = false
                                     }
                             )
                         }

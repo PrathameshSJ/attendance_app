@@ -105,7 +105,7 @@ class NotificationManager(private val context: Context) {
                                 }
 
                                 // --- Check 2: Class Count Limit ---
-                                if (currentEntity.max_days > 0) {
+                                if (currentEntity.max_classes > 0) {
                                         // Count PRESENT attendance for THIS entity's range
                                         val presentCount =
                                                 allAttendance.count {
@@ -119,7 +119,8 @@ class NotificationManager(private val context: Context) {
                                                                                 .subscriptionEndDate
                                                 }
 
-                                        val classesRemaining = currentEntity.max_days - presentCount
+                                        val classesRemaining =
+                                                currentEntity.max_classes - presentCount
 
                                         var countWarningType: NotificationType? = null
                                         if (classesRemaining <= 1)

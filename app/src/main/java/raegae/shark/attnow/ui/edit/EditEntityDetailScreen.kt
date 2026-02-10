@@ -48,9 +48,9 @@ fun EditEntityDetailScreen(navController: NavController, studentId: Int) {
     // State
     var startMillis by remember(student) { mutableStateOf(student.subscriptionStartDate) }
     var endMillis by remember(student) { mutableStateOf(student.subscriptionEndDate) }
-    var maxDays by remember(student) { mutableStateOf(student.max_days.toString()) }
+    var maxClasses by remember(student) { mutableStateOf(student.max_classes.toString()) }
     var phoneNumber by remember(student) { mutableStateOf(student.phoneNumber) }
-    var expandedMaxDays by remember { mutableStateOf(false) }
+    var expandedMaxClasses by remember { mutableStateOf(false) }
 
     // Batch Logic Copied/Adapted
     val weekDays = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
@@ -179,7 +179,7 @@ fun EditEntityDetailScreen(navController: NavController, studentId: Int) {
                                                         subscriptionEndDate = endMillis,
                                                         daysOfWeek = selectedDays,
                                                         batchTimes = newBatchTimes,
-                                                        max_days = maxDays.toIntOrNull() ?: 0,
+                                                        max_classes = maxClasses.toIntOrNull() ?: 0,
                                                         phoneNumber = phoneNumber
                                                 )
 
@@ -241,36 +241,36 @@ fun EditEntityDetailScreen(navController: NavController, studentId: Int) {
                 }
             }
 
-            // Max Days
+            // Max Classes
             Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 ExposedDropdownMenuBox(
-                        expanded = expandedMaxDays,
-                        onExpandedChange = { expandedMaxDays = !expandedMaxDays }
+                        expanded = expandedMaxClasses,
+                        onExpandedChange = { expandedMaxClasses = !expandedMaxClasses }
                 ) {
                     OutlinedTextField(
-                            value = maxDays,
+                            value = maxClasses,
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("Max Days (0 = Unlimited)") },
+                            label = { Text("Max Classes (0 = Unlimited)") },
                             modifier =
                                     Modifier.fillMaxWidth()
                                             .menuAnchor(MenuAnchorType.PrimaryNotEditable)
                     )
 
                     ExposedDropdownMenu(
-                            expanded = expandedMaxDays,
-                            onDismissRequest = { expandedMaxDays = false }
+                            expanded = expandedMaxClasses,
+                            onDismissRequest = { expandedMaxClasses = false }
                     ) {
                         (0..50).forEach {
                             DropdownMenuItem(
                                     text = { Text(it.toString()) },
                                     onClick = {
-                                        maxDays = it.toString()
-                                        expandedMaxDays = false
+                                        maxClasses = it.toString()
+                                        expandedMaxClasses = false
                                     }
                             )
                         }

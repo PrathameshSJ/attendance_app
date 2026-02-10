@@ -15,7 +15,7 @@ class AddStudentViewModel(private val database: AppDatabase) : ViewModel() {
             subscriptionEndDate: Long,
             batchTimes: Map<String, String>,
             daysOfWeek: List<String>,
-            maxDays: Int,
+            maxClasses: Int,
             phoneNumber: String
     ): Boolean {
         val students = database.studentDao().getAllStudents().first()
@@ -29,7 +29,7 @@ class AddStudentViewModel(private val database: AppDatabase) : ViewModel() {
                         subscriptionEndDate = subscriptionEndDate,
                         batchTimes = batchTimes,
                         daysOfWeek = daysOfWeek,
-                        max_days = maxDays,
+                        max_classes = maxClasses,
                         phoneNumber = phoneNumber
                 )
         database.studentDao().insert(student)
@@ -72,26 +72,27 @@ class AddStudentViewModel(private val database: AppDatabase) : ViewModel() {
             // Extend existing subscription
             // The user said "subscription is increased" -> we just move the end date
             // The UI calculates newEndDate based on added months/days.
-            // also update max_days (add new to old? or just validation?
-            // "max days are reduced per present" -> implies it's a limit for the DURATION.
-            // If we extend duration, we probably extend max_days too?
-            // User said: "max days are reduced per present... if a student buys subscription for 3
+            // also update max_classes (add new to old? or just validation?
+            // "max classes are reduced per present" -> implies it's a limit for the DURATION.
+            // If we extend duration, we probably extend max_classes too?
+            // User said: "max classes are reduced per present... if a student buys subscription for
+            // 3
             // mnths for 12 classes...
             // then he can complete 12 classes in 3 mnths... if he renew"
-            // If extending, we should probably ADD the new max_days to the existing one?
+            // If extending, we should probably ADD the new max_classes to the existing one?
             // "renew start is on the same day as the end date"...
             // If it's a renewal, we usually create a NEW entity or extend.
             // My logic merges if contiguous.
-            // If I merge, I should probably sum the max_days.
-            // "max_days is to be inputted by the user... counter for a reminder"
+            // If I merge, I should probably sum the max_classes.
+            // "max_classes is to be inputted by the user... counter for a reminder"
             // If I renew for another 12 classes, total should be old_limit + 12.
 
-            val newMaxDays = exactMatch.max_days + newStudent.max_days
+            val newMaxClasses = exactMatch.max_classes + newStudent.max_classes
 
             studentDao.update(
                     exactMatch.copy(
                             subscriptionEndDate = newStudent.subscriptionEndDate,
-                            max_days = newMaxDays
+                            max_classes = newMaxClasses
                     )
             )
         } else {
